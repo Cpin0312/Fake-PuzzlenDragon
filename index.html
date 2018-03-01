@@ -1236,7 +1236,7 @@
 
         }
               
-        if(allCombo.length == 0 && containText.children.length > 0  && allDrops.length == (mapX*mapY) || (flgNoCombo == true) )
+        if(allCombo.length == 0 && containText.children.length > 0  && allDrops.length == (mapX*mapY)  )
         {
             containText.children = Enumerable.from(containText.children).orderBy(xx=> xx.Id).toArray();
             handlePowerUp();
