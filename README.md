@@ -69,7 +69,7 @@ if you cant do it in 5 times, game is over.
 when you win the game, the monster would be eggs and show.
 
 # Some issue for me
-I wish to use TweenJs to control sprite, is TweenJs position to share stage with PIXI?
+Q : I wish to use TweenJs to control sprite, is TweenJs position to share stage with PIXI?
 When matched drops was remove, your can hear the effect sound, but very low volume(because i am get it from youtube, and use (GoldWare)[https://www.goldwave.com/] to modified it.)
 
 i need some way to mave a effect able to increase a frequency(Hz), SoundJs look like not support it, can some one tell me how to make it?
@@ -81,9 +81,18 @@ example like
 2 combo = play sound with 12Hz
 
 3 combo = play sound with 14Hz and etc
+
+A : OK,I have using ToneJs to solved it, but tone is not same enought
+
+Q : When page is startup, startupBgm is not able to play, but sound effect trigged by some effect is able to play.
+
+Is it my setting problem?
+
  
 # Improvement
-i am trying to use TweenJs to move monster or egg , but maybe i need more times.... 
+Q : i am trying to use TweenJs to move monster or egg , but maybe i need more times.... 
+
+A : OK, I added it, but also not perfect enough
 
 if your have feel some bugs or any comments, please tell me, i try to make this game be more complete.
 
