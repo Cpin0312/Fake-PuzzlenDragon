@@ -27,7 +27,9 @@
     var commPIXI = new commonPIXI(PIXI);
     var allDrops = [];
     var allCombo = []; 
-    var app = new PIXI.Application(DropSize*mapX,DropSize*mapY + 350,{backgroundColor :  comm.GetColor('Black')});
+    //var app = new PIXI.Application(DropSize*mapX,DropSize*mapY + 350,{backgroundColor :  comm.GetColor('Black')});
+    var app = new PIXI.Application(window.innerHeight * (2.5/4),window.innerHeight - 50 ,{backgroundColor :  comm.GetColor('Black')});
+    
     document.body.appendChild(app.view);
         
     var groupFire = new PIXI.display.Group(1,false);
@@ -58,8 +60,14 @@
     containAll.y = 350;
     containAll.addChild(containRect);
     containAll.addChild(containText);
-    app.stage.addChild(containAll);
-    app.stage.addChild(containTop);
+    
+    var containerAll = new PIXI.Container();
+    containerAll.addChild(containAll);
+    containerAll.addChild(containTop);
+    app.stage.addChild(containerAll);
+    
+    //app.stage.addChild(containAll);
+    //app.stage.addChild(containTop);
         
     createjs.Sound.alternateExtensions = ["mp3"];
     createjs.Sound.registerSound({src:"src/sounds/puzzleDragonbmg.mp3", id:"sound"});
@@ -280,6 +288,8 @@
                 allDrops = [];
             }
         }
+        containerAll.width = app.view.width;
+        containerAll.height =  app.view.height;
         gameLoop();
     }
         
@@ -459,7 +469,6 @@
             gameOver.x = 80;
             gameOver.y = 530;
             containTop.addChild(gameOver);
-            
 			// Clear all keys
 			store.set('user', { enamyHp:undefined ,teamHp:undefined });
 			gameOverFlg = true;
@@ -1265,7 +1274,6 @@
                     createjs.Tween.get(move[i])
                     .to({ y : move[i].moveTarget }, 300, createjs.Ease.circOut)
                     .call(function(){this.moveTarget = undefined;})
-                    .call(handleComplete);
                 }
             }
             else
