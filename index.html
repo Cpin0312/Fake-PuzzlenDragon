@@ -188,7 +188,7 @@
         enemyHpTexture = resources.enemyHp.texture;
         if(dataSave.enemyHp != undefined)
         {
-        	var tempTexture = new PIXI.Texture(enemyHpTexture.baseTexture,new PIXI.Rectangle(0,0,dataSave.enemyHp,enemyHpTexture.y))
+        	var tempTexture = new PIXI.Texture(enemyHpTexture.baseTexture,new PIXI.Rectangle(0,0,dataSave.enemyHp,enemyHpTexture.baseTexture.height))
         	enemyHp = new PIXI.Sprite(tempTexture);
         }
         else
@@ -461,11 +461,8 @@
             containTop.addChild(gameOver);
             
 			// Clear all keys
-			store.set('user', { enamyHp:undefined });
-			store.set('user', { teamHp:undefined });
-			
-			enemyHp
-            gameOverFlg = true;
+			store.set('user', { enamyHp:undefined ,teamHp:undefined });
+			gameOverFlg = true;
         }
         //if over 9combos 
         if(countComboForText > maxCombo && containText.children == 0 && flg3Times == true)
@@ -480,7 +477,7 @@
                 var tempTexture = new PIXI.Texture(enemyHpTexture.baseTexture,new PIXI.Rectangle(0,0,(enemyHpTexture.baseTexture.width/3)*(remainPercentage-1),enemyHpTexture.height));
                 
 				// Store current user
-				store.set('user', { enamyHp:(enemyHpTexture.baseTexture.width/3)*(remainPercentage-1) });
+				store.set('user', { enemyHp:(enemyHpTexture.baseTexture.width/3)*(remainPercentage-1), teamHp : dataSave.teamHp });
 				
                 var tempSprite = new PIXI.Sprite(tempTexture);
                 tempSprite.position = enemyHp.position;
@@ -520,8 +517,8 @@
                     egg.y = 180;
                     containTop.addChild(egg);
 					// Clear all keys
-					store.set('user', { enamyHp:undefined });
-					store.set('user', { teamHp:undefined });
+				store.set('user', { enemyHp:undefined, teamHp : undefined});
+					
                 }
             }
             else
@@ -1247,7 +1244,7 @@
                 tweenHp(teamHp);
                 teamHp.width = (teamHp.width < (hpBoss/5)) ? 0 :teamHp.width  -= (hpBoss/5);
                 flgNoCombo = false;
-				store.set('user', { teamHp:teamHp.width });
+				store.set('user', { enemyHp:dataSave.enemyHp, teamHp : teamHp.width});
                 
             }
             return;
