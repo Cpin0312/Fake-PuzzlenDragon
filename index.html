@@ -89,6 +89,7 @@
     var flgNoCombo = false;
     let startTime ;
     let hpBoss ;
+    var loopCount = 0;
 
     //image Name
     var topbackGroup;
@@ -113,7 +114,6 @@
     let gameOverFlg = false; 
     let gameWinFlg = false; 
     var flgDragging = false;
-    var flgMoving = false;
     var flgStartUp = true;
     //When Seleted drog hit with other drop, start countTime
     var flgStartMoving = false;
@@ -174,6 +174,7 @@
         teamHp.x = 35;
         teamHp.y = 322;
         teamHp.parentGroup = groupTop;
+        //load saveData
         if(dataSave != undefined && dataSave.teamHp != undefined)
         {
 	        teamHp.width = dataSave.teamHp;
@@ -194,6 +195,7 @@
         containTop.addChild(teamHpCover);
         //set Monster hpBar(Discreace able)
         enemyHpTexture = resources.enemyHp.texture;
+        //load saveData
         if(dataSave != undefined && dataSave.enemyHp != undefined)
         {
         	var tempTexture = new PIXI.Texture(enemyHpTexture.baseTexture,new PIXI.Rectangle(0,0,dataSave.enemyHp,enemyHpTexture.baseTexture.height))
@@ -629,6 +631,7 @@
             this.flgDragging = false;
             flgDragging = false  ;
             flgMoveUptoDown = true;
+            loopCount = 0;
         }
     }
     //Mouse Move
@@ -1210,14 +1213,29 @@
      //removeDrop   
     function removeDrop()
     {
-        if(flgMoving == false)
+        loopCount++;
+        allCombo = GetCombo();
+        //Move with no combo
+        if(flgStartMoving == true && allCombo.length == 0 && allDrops.length == (mapX*mapY) && loopCount==1)
         {
-            allCombo = GetCombo();
+            tweenHp(teamHpCover);
+            tweenHp(teamHp);
+            teamHp.width = (teamHp.width < (hpBoss/5)) ? 0 :teamHp.width  -= (hpBoss/5);
+            var tEnemyHp;
+            if(dataSave != undefined &&  dataSave.enemyHp != undefined)
+            {
+                tEnemyHp = dataSave.enemyHp
+            }
+            else
+            {
+                tEnemyHp = enemyHp.width
+            }
+            store.set('user', { enemyHp:tEnemyHp, teamHp : teamHp.width});
             flgStartMoving = false;
+            return;
         }
         if(allCombo.length > 0 && ( Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined) ==  0))
         {
-            
             for(var i = 0; i<allCombo.length;i++ )
             {
                 if(allCombo[i][0].alpha == 1)
@@ -1248,7 +1266,6 @@
                 tweenText(msg);
             }
             allCombo = [];            
-
         }
               
         if(allCombo.length == 0 && containText.children.length > 0  && allDrops.length == (mapX*mapY)  )
@@ -1272,8 +1289,8 @@
                 }
                 
 				store.set('user', { enemyHp:tEnemyHp, teamHp : teamHp.width});
-                
             }
+            flgStartMoving = false;
             return;
                
         }  
@@ -1306,7 +1323,6 @@
     {
         if(Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined)== 0 && allDrops.length <  (mapX*mapY))
         {
-            flgMoving = false;
             var flg = SetDrop();
             allCombo = GetCombo();
         }
