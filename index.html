@@ -174,7 +174,7 @@
         teamHp.x = 35;
         teamHp.y = 322;
         teamHp.parentGroup = groupTop;
-        if(dataSave.teamHp != undefined)
+        if(dataSave != undefined && dataSave.teamHp != undefined)
         {
 	        teamHp.width = dataSave.teamHp;
         }
@@ -194,7 +194,7 @@
         containTop.addChild(teamHpCover);
         //set Monster hpBar(Discreace able)
         enemyHpTexture = resources.enemyHp.texture;
-        if(dataSave.enemyHp != undefined)
+        if(dataSave != undefined && dataSave.enemyHp != undefined)
         {
         	var tempTexture = new PIXI.Texture(enemyHpTexture.baseTexture,new PIXI.Rectangle(0,0,dataSave.enemyHp,enemyHpTexture.baseTexture.height))
         	enemyHp = new PIXI.Sprite(tempTexture);
@@ -486,7 +486,16 @@
                 var tempTexture = new PIXI.Texture(enemyHpTexture.baseTexture,new PIXI.Rectangle(0,0,(enemyHpTexture.baseTexture.width/3)*(remainPercentage-1),enemyHpTexture.height));
                 
 				// Store current user
-				store.set('user', { enemyHp:(enemyHpTexture.baseTexture.width/3)*(remainPercentage-1), teamHp : dataSave.teamHp });
+                var tTempHp;
+                if(dataSave != undefined &&  dataSave.teamHp != undefined)
+                {
+                    tTempHp = dataSave.teamHp
+                }
+                else
+                {
+                    tTempHp = teamHp.width
+                }
+				store.set('user', { enemyHp:(enemyHpTexture.baseTexture.width/3)*(remainPercentage-1), teamHp : tTempHp });
 				
                 var tempSprite = new PIXI.Sprite(tempTexture);
                 tempSprite.position = enemyHp.position;
@@ -1253,7 +1262,17 @@
                 tweenHp(teamHp);
                 teamHp.width = (teamHp.width < (hpBoss/5)) ? 0 :teamHp.width  -= (hpBoss/5);
                 flgNoCombo = false;
-				store.set('user', { enemyHp:dataSave.enemyHp, teamHp : teamHp.width});
+                var tEnemyHp;
+                if(dataSave != undefined &&  dataSave.enemyHp != undefined)
+                {
+                    tEnemyHp = dataSave.enemyHp
+                }
+                else
+                {
+                    tEnemyHp = teamHp.width
+                }
+                
+				store.set('user', { enemyHp:tEnemyHp, teamHp : teamHp.width});
                 
             }
             return;
@@ -1274,6 +1293,7 @@
                     createjs.Tween.get(move[i])
                     .to({ y : move[i].moveTarget }, 300, createjs.Ease.circOut)
                     .call(function(){this.moveTarget = undefined;})
+                    .call(handleComplete);
                 }
             }
             else
