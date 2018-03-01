@@ -1,0 +1,1346 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset = 'utf-8'>
+	<title>FakePuzzleAndDragon</title>
+</head>
+<script src = 'lib/commonMethod.js'></script>
+<script src = 'lib/commonPIXI.js'></script>
+<script src = 'lib/linq.js'></script>
+<script src = 'lib/pixi.min.js'></script>
+<script src = 'lib/pixi-layers.js'></script>
+<script src = 'lib/soundjs-0.6.2.min.js'></script>
+<script src = 'lib/tweenjs.min.js'></script>
+<script src = 'lib/Tone.min.js'></script>
+    
+<style>* {padding: 0; margin: 0}</style>
+<body >
+	<script type = 'text/javascript'>
+    //initail Data
+    var mapX =6;
+    var mapY = 5;    
+    var maxCombo = 9;
+
+    const DropSize = 80;
+        
+    var totalDrops = mapX * mapY;
+    var comm = new commonMethod();
+    var commPIXI = new commonPIXI(PIXI);
+    var allDrops = [];
+    var allCombo = []; 
+    var app = new PIXI.Application(DropSize*mapX,DropSize*mapY + 350,{backgroundColor :  comm.GetColor('Black')});
+    document.body.appendChild(app.view);
+        
+    var groupFire = new PIXI.display.Group(1,false);
+    var groupEarth = new PIXI.display.Group(2,false);
+    var groupWater = new PIXI.display.Group(3,false);
+    var groupLight = new PIXI.display.Group(4,false);
+    var groupDark = new PIXI.display.Group(5,false);
+    var groupDrag = new PIXI.display.Group(7,false);
+    var groupText = new PIXI.display.Group(9,false);
+    var groupTop = new PIXI.display.Group(10,false);
+        
+    app.stage = new PIXI.display.Stage();
+    app.stage.addChild(new PIXI.display.Layer(groupFire));
+    app.stage.addChild(new PIXI.display.Layer(groupEarth));
+    app.stage.addChild(new PIXI.display.Layer(groupWater));
+    app.stage.addChild(new PIXI.display.Layer(groupLight));
+    app.stage.addChild(new PIXI.display.Layer(groupDark));
+    app.stage.addChild(new PIXI.display.Layer(groupDrag));
+    app.stage.addChild(new PIXI.display.Layer(groupText));
+    app.stage.addChild(new PIXI.display.Layer(groupTop));
+    
+    var containRect = new PIXI.Container();
+    var containText = new PIXI.Container();
+    var containAll = new PIXI.Container();
+    var containTop = new PIXI.Container();
+        
+    containAll.x = 0;
+    containAll.y = 350;
+    containAll.addChild(containRect);
+    containAll.addChild(containText);
+    app.stage.addChild(containAll);
+    app.stage.addChild(containTop);
+        
+    createjs.Sound.alternateExtensions = ["mp3"];
+    createjs.Sound.registerSound({src:"src/sounds/puzzleDragonbmg.mp3", id:"sound"});
+    createjs.Sound.registerSound({src:"src/sounds/drogMoveShort.mp3", id:"soundMove"});
+    createjs.Sound.registerSound({src:"src/sounds/powerUp.mp3", id:"powerUp"});
+    createjs.Sound.registerSound({src:"src/sounds/gameOver.mp3", id:"gameOverSound"});
+    createjs.Sound.registerSound({src:"src/sounds/gameWin.mp3", id:"gameWin"});
+ 
+        
+    var dropFire ;
+    var dropEarth ;
+    var dropWater ;
+    var dropLight ;
+    var dropDark ;
+    var audio;
+    var HpMonster;
+    var audioMoving ;
+    var flg3Times = false;
+    let startTime ;
+    let hpBoss ;
+
+    //image Name
+    var topbackGroup;
+    var enemy;
+    var teamMonster;
+    var teamHp;
+    var teamHpCover;
+    var enemyHp;
+    var enemyHpCover;
+    var combo9;
+    var gameOver;
+    var clearStage;
+    var egg ;
+    var enemyHpTexture;
+    
+    let maxMonsterHp;
+        
+    var holdingTime = 800000;
+    var countComboForText = 0;
+    var delay_1 = 0;
+        
+    let gameOverFlg = false; 
+    let gameWinFlg = false; 
+    var flgDragging = false;
+    var flgMoving = false;
+    var flgStartUp = true;
+    //When Seleted drog hit with other drop, start countTime
+    var flgStartMoving = false;
+    //Start moving for new drops
+    var flgMoveUptoDown = false;
+    //set Tone
+    var toneArray = ['E4','F4','F#4','G4','G#4','A4','A#4','B4',
+                     'C5','C#5','D5','D#5','E5','F5','F#5','G5','G#5','A5','A#5','B5',
+                     'C6','C#6','D6','D#6','E6','F6','F#6','G6','G#6','A6','A#6','B6',
+                     'C7','C#7','D7','D#7','E7','F7','F#7','G7','G#7','A7','A#7','B7']
+        
+    PIXI.loader
+        .add('src/images/PuzzleDragons.json')
+        .add('src/images/background.json')
+        .add('topbackgroup','src/images/topbackgroup.png')
+        .add('enemy','src/images/monster.png')
+        .add('teamMonster','src/images/mon_1.png')
+        .add('teamHpCover','src/images/HpBar.png')
+        .add('teamHp','src/images/HpBarLife.png')
+        .add('enemyHp','src/images/hpBarMonster.png')
+        .add('enemyHpCover','src/images/HpMonster.png')
+        .add('combo9','src/images/9Combo.png')
+        .add('gameOver','src/images/gameOver.png')
+        .add('clear','src/images/clear.png')
+        .add('egg','src/images/egg.png')
+        .load(setup);
+    
+    //StartUp Setting
+    function setup(loader,resources)
+    {
+
+        //Play BackGroup BGM
+        handleLoadComplete();   
+        //set Battle BackGroup
+        topbackGroup = new PIXI.Sprite(resources.topbackgroup.texture);
+        topbackGroup.width = DropSize*mapX;
+        topbackGroup.height = 325;
+        topbackGroup.parentGroup = groupTop;
+        containTop.addChild(topbackGroup);
+        //set Monster
+        enemy = new PIXI.Sprite(resources.enemy.texture);
+        enemy.scale.x /= 2;
+        enemy.scale.y /= 2;
+        enemy.x = 90;
+        enemy.y = 20;
+        enemy.parentGroup = groupTop;
+        containTop.addChild(enemy);
+        //set Fighter Member
+        teamMonster = new PIXI.Sprite(resources.teamMonster.texture);
+        teamMonster.scale.x /= 1.3;
+        teamMonster.scale.y /= 1.3;
+        teamMonster.x = 10;
+        teamMonster.y = 240;
+        teamMonster.parentGroup = groupTop;
+        containTop.addChild(teamMonster);
+        //set Hp life(Discreace able)
+        teamHp = new PIXI.Sprite(resources.teamHp.texture);
+        teamHp.width = 430;
+        teamHp.x = 35;
+        teamHp.y = 322;
+        teamHp.parentGroup = groupTop;
+        hpBoss = teamHp.width;
+        containTop.addChild(teamHp);
+        //set Hp life(Cover Only)
+        teamHpCover = new PIXI.Sprite(resources.teamHpCover.texture);
+        teamHpCover.scale.x /= 1.35;
+        teamHpCover.scale.y /= 1.3;
+        teamHpCover.x = 10;
+        teamHpCover.y = 322;
+        teamHpCover.parentGroup = groupTop;
+        containTop.addChild(teamHpCover);
+        //set Monster hpBar(Discreace able)
+        enemyHpTexture = resources.enemyHp.texture;
+        enemyHp = new PIXI.Sprite(resources.enemyHp.texture);
+        enemyHp.scale.x /= 1.35;
+        enemyHp.scale.y /= 1.3;
+        maxMonsterHp = enemyHp.width;
+        enemyHp.x = 90;
+        enemyHp.y = 225;
+        enemyHp.parentGroup = groupTop;
+        containTop.addChild(enemyHp);
+        //set Monster hpBar(Not Discreace able)
+        enemyHpCover = new PIXI.Sprite(resources.enemyHpCover.texture);
+        enemyHpCover.scale.x /= 1.35;
+        enemyHpCover.scale.y /= 1.3;
+        enemyHpCover.x = 60;
+        enemyHpCover.y = 213;
+        enemyHpCover.parentGroup = groupTop;
+        containTop.addChild(enemyHpCover);
+        //Boss Skill Icon
+        combo9 = new PIXI.Sprite(resources.combo9.texture);
+        combo9.x = 100;
+        combo9.y = 50;
+        combo9.parentGroup = groupTop;
+        containTop.addChild(combo9);
+        //Game Over scene
+        gameOver = new PIXI.Sprite(resources.gameOver.texture);
+        gameOver.scale.x *= 1.5;
+        gameOver.scale.y *= 1.5;
+        //Game Clear scene
+        clearStage = new PIXI.Sprite(resources.clear.texture);
+        //Egg scene
+        egg = new PIXI.Sprite(resources.egg.texture);
+        egg.anchor.set(0.5);
+        //Drop Backgroup
+        puzzleBackDround_Id = PIXI.loader.resources['src/images/background.json'].textures;
+        //Game Scene Setting
+        //BackGroup(Tiling)
+        background = new PIXI.Texture(puzzleBackDround_Id['backGround.png']);
+        tileBackGround = new PIXI.extras.TilingSprite(background,DropSize*mapX,DropSize*mapY);
+        tileBackGround.tileScale.x *= 0.83;
+        tileBackGround.tileScale.y *= 0.83;
+        containAll.addChild(tileBackGround);
+        app.stage.group.enableSort = true;
+        //Drops
+        puzzleDrops_Id = PIXI.loader.resources['src/images/PuzzleDragons.json'].textures;
+        dropFire = puzzleDrops_Id['fire.png'];
+        dropFire.IdGroup = 1;
+        dropEarth = puzzleDrops_Id['earth.png'];
+        dropEarth.IdGroup = 2;
+        dropWater = puzzleDrops_Id['water.png'];
+        dropWater.IdGroup = 3;
+        dropLight = puzzleDrops_Id['light.png'];
+        dropLight.IdGroup = 4;
+        dropDark = puzzleDrops_Id['dark.png'];
+        dropDark.IdGroup = 5;
+        
+        //First Time setting with no matching Page
+        var flg = true;
+        while(flg == true)
+        {
+            //Set DropPage
+            SetDrop();
+            //First Page would been 10combos able page
+            getParentList = Enumerable.from(allDrops).select(xx=> xx.parentGroup).distinct().toArray();
+            for(var i = 0; i < getParentList.length; i++)
+            {
+                getElementList = Enumerable.from(allDrops).where(xx=> xx.parentGroup == getParentList[i]).toArray();
+                if(getElementList.length % 3 != 0)
+                {
+                    containRect.removeChildren();
+                    allDrops = [];
+                    break;
+                }
+            }
+            if(allDrops.length == 0) continue;
+            //Get Remove Able Combo
+            allCombo = GetCombo();
+            if(allCombo.length == 0)
+            {
+                //stop infinity Loop
+                flg = false;
+            }
+            else
+            {
+                containRect.removeChildren();
+                allDrops = [];
+            }
+        }
+        gameLoop();
+    }
+        
+    function SetDrop()
+    {
+        var ret = false;
+        for(var i = 0;i<totalDrops;i++)
+        {
+            //Set Position
+            var position_x = ((i%mapX) * DropSize) + (DropSize/2);
+            var position_y = ((Math.floor(i/mapX)) * DropSize) + (DropSize/2);
+            //get Random element
+            var randomCnt = comm.GetRandomInt(1,5);
+            var Drop;
+            
+            // Reset Id if drop exist
+            if(allDrops.length > 0)
+            {
+                if(Enumerable.from(allDrops).count(xx=> xx.x ==position_x && xx.y == position_y ) > 0)
+                {
+                    var temp = Enumerable.from(allDrops).where(xx=> xx.x ==position_x && xx.y == position_y ).first();
+                    temp.Id = i;
+                    continue;
+                }
+            }
+            // Set parentgroup
+            if(randomCnt == dropFire.IdGroup)
+            {
+                Drop = new PIXI.Sprite(dropFire);
+                Drop.parentGroup = groupFire;
+            }
+            // Set parentgroup
+            else if(randomCnt == dropEarth.IdGroup)
+            {
+                Drop = new PIXI.Sprite(dropEarth);
+                Drop.parentGroup = groupEarth;
+            }
+            // Set parentgroup
+            else if(randomCnt == dropWater.IdGroup)
+            {
+                Drop = new PIXI.Sprite(dropWater);
+                Drop.parentGroup = groupWater;
+            }
+            // Set parentgroup
+            else if(randomCnt == dropLight.IdGroup)
+            {
+                Drop = new PIXI.Sprite(dropLight);
+                Drop.parentGroup = groupLight;
+            }
+            // Set parentgroup
+            else if(randomCnt == dropDark.IdGroup)
+            {
+                Drop = new PIXI.Sprite(dropDark);
+                Drop.parentGroup = groupDark;
+            }
+            // Set parentgroup
+            //Only first time (tranparent)
+            if(flgStartUp == true) Drop.alpha = 0;
+            //Add showable drop on page
+            containRect.addChild(Drop);
+            //Active after keyUp which have matched
+            if(flgMoveUptoDown == true)
+            {
+                //MoveDown from top if drop have removed
+                Drop.startY = position_y
+                Drop.position.set(position_x,(DropSize/2) + position_y -  (mapY * DropSize));
+            }
+            else
+            {
+                //start up Only
+                Drop.position.set(position_x,position_y);
+            }
+            //center point
+            Drop.anchor.set(0.5);
+            Drop.width = DropSize;
+            Drop.height = DropSize;
+            Drop.Id = i;
+            //Set button event to each spirite
+            subscribe(Drop);
+            allDrops.push(Drop);
+            ret = true;
+        }
+        return ret;
+
+    }
+        
+    function gameLoop()
+    {
+        requestAnimationFrame(gameLoop);
+        //Only First time
+        if(flgStartUp == true)
+        {
+            //make tranparent drop to normal 
+            if(Enumerable.from(containRect.children).count(xx=> xx.alpha < 1) > 0)
+            {
+                var list_Y = Enumerable.from(containRect.children).select(xx=> xx.y).distinct().orderByDescending().toArray();
+                for(var i =0; i< list_Y.length;i++)
+                {
+                    var lisT = Enumerable.from(containRect.children).where(xx=> xx.y == list_Y[i] ).toArray();
+                    for(var j =0; j< lisT.length;j++)
+                    {
+                        lisT[j].alpha += (i * 0.02) + 0.05;
+                        if(lisT[j].alpha >= 1) lisT[j].alpha = 1;
+                    }
+                }
+            }
+            //reset flg
+            else
+            {
+                flgStartUp = false;
+            }
+        }
+        //Let drop move from up to down
+        if(Enumerable.from(containRect.children).count(xx=> xx.startY > 0) > 0)
+        {
+            var ListY = Enumerable.from(containRect.children).where(xx=> xx.startY > 0).toArray();
+            var Vertical = Enumerable.from(ListY).select(xx=> xx.y).distinct().orderByDescending().toArray();
+            for(var i =0; i< Vertical.length;i++)
+            {
+                var lisT = Enumerable.from(ListY).where(xx=> xx.y == Vertical[i] ).toArray();
+                for(var j =0; j< lisT.length;j++)
+                {
+                    if(lisT[j].y < lisT[j].startY)
+                    {
+                        lisT[j].y  += 25
+                        if(lisT[j].y >= lisT[j].startY) 
+                        {
+                            lisT[j].y = lisT[j].startY;
+                            lisT[j].startY = 0;
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            if(flgDragging == false)
+            {
+                //get maching Drop
+                removeDrop();
+            }
+        }
+        
+        //set TextColor
+        if(containText.children.length > 0)
+        {
+            delay_1 += 1;
+            if(delay_1 % 6 == 0)
+            {
+                for(var  i = 0; i< containText.children.length ;i++)
+                {
+                    if(containText.children[i].style.fill == 'red')
+                    {
+                        containText.children[i] = SetmsgColor(containText.children[i],'white',24);
+                    }
+                    else
+                    {
+                        containText.children[i] = SetmsgColor(containText.children[i],'red',24);
+                    }
+                }
+            }
+        }
+        
+        //Game OverFlg
+        if(teamHp.width <= 0 )
+        {
+           audio.paused = true;
+            if(gameOverFlg == false)handleGameOver();
+            if(containRect.children[0].alpha > 0)
+            {
+                for(var i = 0; i<containRect.children.length; i ++ )
+                {
+                    containRect.children[i].alpha -= 0.03;
+                }
+            }
+            gameOver.parentGroup = groupTop;
+            gameOver.x = 80;
+            gameOver.y = 530;
+            containTop.addChild(gameOver);
+            gameOverFlg = true;
+        }
+        //if over 9combos 
+        if(countComboForText > maxCombo && containText.children == 0 && flg3Times == true)
+        {
+            tweenHp(enemyHp);
+            tweenHp(enemyHpCover);
+            containTop.removeChild(enemyHp);
+            let remainHp = Math.floor((enemyHp.width/maxMonsterHp) * 10); 
+            let remainPercentage = Math.floor(remainHp/3);
+            if( remainPercentage != 1)
+            {
+                var tempTexture = new PIXI.Texture(enemyHpTexture.baseTexture,new PIXI.Rectangle(0,0,(enemyHpTexture.baseTexture.width/3)*(remainPercentage-1),enemyHpTexture.height));
+                var tempSprite = new PIXI.Sprite(tempTexture);
+                tempSprite.position = enemyHp.position;
+                enemyHp = tempSprite;
+                enemyHp.scale.x /= 1.35;
+                enemyHp.scale.y /= 1.3;
+                enemyHp.parentGroup = groupTop;
+                containTop.addChild(enemyHp);
+            }
+            else
+            {
+                enemyHp.width = 0;
+                countComboForText = 0;
+                gameWinFlg = true;
+            }
+            flg3Times =false;
+
+        }
+        // if win the game
+        if(gameWinFlg == true)
+        {
+            //monster been transparent
+            if(enemy.alpha !=0)
+            {
+                enemy.alpha -= 0.01;
+                enemyHp.alpha -= 0.01;
+                combo9.alpha -= 0.01;
+                if(enemy.alpha < 0.1 )
+                {
+                    enemyHpCover.width = 0;
+                    enemy.alpha = 0;
+                    combo9.alpha = 0;
+                    audio.paused = true;
+                    egg.parentGroup = groupTop;
+                    egg.alpha = 0;
+                    egg.x = 230;
+                    egg.y = 180;
+                    containTop.addChild(egg);
+                    
+                }
+            }
+            else
+            {
+                if(containRect.children[0].alpha > 0.5)
+                {
+                    for(var i = 0; i<containRect.children.length; i ++ )
+                    {
+                        containRect.children[i].alpha -= 0.5;
+                    }
+                }
+                if(containRect.children[0].alpha <= 0.5)
+                {
+                    //Show egg
+                    egg.alpha += 0.1;
+                    if(egg.alpha >= 1)
+                    {
+                        moveEgg(egg);
+                        handleLoadGameWin();
+                        clearStage.parentGroup = groupTop;
+                        clearStage.scale.x *= 0.8;
+                        clearStage.scale.y *= 0.8;
+                        clearStage.x = 60;
+                        clearStage.y = 50;
+                        containTop.addChild(clearStage);
+                        gameWinFlg = false;
+                        flgStartMoving = true;
+                    }
+                }
+            }
+        }
+    }
+        
+    function SetmsgColor(textSprite,color)
+    {
+        var sprite_Text = textSprite;
+        sprite_Text.style = {
+            fontFamily: "BauHaus 93",
+            fontSize: 24,
+            fill: color,
+            stroke: '#000000',
+            strokeThickness: 4,
+        };
+        return sprite_Text;
+    }
+        
+    //Set Mouse Event
+    function subscribe(obj)
+    {
+        obj.interactive = true;
+        obj.buttonMode= true;
+        obj.on('pointerdown',dragDown);
+        obj.on('pointerup',dragUp);
+        obj.on('pointermove',dragMove);
+    }
+    // MouseClick
+    function dragDown(event)
+    {
+        if(flgStartMoving == true) return ;
+        if(this.flgDragging != true && flgStartUp == false)
+        {
+            
+            startTime = new Date();
+            countComboForText = 0;
+            flgMoveUptoDown = false;
+            flgDragging = true;
+            this.flgDragging = true;
+            this.data = event.data;
+            this.scale.x *= 1.1;
+            this.scale.y *= 1.1;
+            this.org_parentGroup = this.parentGroup;
+            this.parentGroup = groupDrag;
+            this.org_position_x = this.x;
+            this.org_position_y = this.y;
+            this.org_Id = this.Id;
+            var mousePst = this.data.getLocalPosition(this.parent);
+            this.position.set(mousePst.x,mousePst.y);
+        }
+    }
+    //Mouse Unclick
+    function dragUp()
+    {
+        if(this.flgDragging == true)
+        {   
+            this.scale.x /= 1.1;
+            this.scale.y /= 1.1;
+            this.parentGroup = this.org_parentGroup;
+            this.x = this.org_position_x;
+            this.y = this.org_position_y;
+            this.flgDragging = false;
+            flgDragging = false  ;
+            flgMoveUptoDown = true;
+        }
+    }
+    //Mouse Move
+    function dragMove(e)
+    {
+       if(this.flgDragging == true)
+        {
+            const timeNow = new Date();
+            var mousePst = this.data.getLocalPosition(this.parent);
+            this.position.set(mousePst.x,mousePst.y);
+            var result = hitDrop(this,allDrops);
+            if( result != undefined)
+            {
+                handleMoving();
+                if(audioMoving.playState == 'playFinished')
+                {
+                    handleMoving();
+                }
+                result.org_Id = result.Id;
+                this.org_Id = this.Id;
+                result.Id = this.Id;
+                this.Id = result.org_Id
+                result.org_position_x = result.x ;
+                result.org_position_y = result.y ;
+                result.x = this.org_position_x;
+                result.y = this.org_position_y;
+                this.org_position_x = result.org_position_x;
+                this.org_position_y = result.org_position_y;
+                flgStartMoving = true;
+                flg3Times = true;
+            }
+            if(timeNow - startTime >holdingTime )
+            {
+                e.stopPropagation();
+                this.scale.x /= 1.1;
+                this.scale.y /= 1.1;
+                this.parentGroup = this.org_parentGroup;
+                this.x = this.org_position_x;
+                this.y = this.org_position_y;
+                this.flgDragging = false;
+                flgDragging = false  ;
+                flgMoveUptoDown = true;
+
+            }
+        }
+    }
+    
+    //Calculate drop with have mmatched or not
+    function hitDrop(draggedDrop,arryDrop)
+    {
+        var thisDrop = draggedDrop;
+        var arryDrop = arryDrop;
+        var thisTop_Left = new PIXI.Point(thisDrop.x - (thisDrop.width/4) ,thisDrop.y - (thisDrop.height/4) );
+        var thisTop_Right = new PIXI.Point(thisDrop.x + (thisDrop.width/4) ,thisTop_Left.y);
+        var thisBottom_Left = new PIXI.Point(thisTop_Left.x,thisDrop.y + (thisDrop.height/4) );
+        var thisBottom_Right = new PIXI.Point(thisTop_Right.x,thisBottom_Left.y);
+        var returnDrop = undefined;
+        
+        for(var i=0; i< arryDrop.length;i++)
+        {
+            var targetDrop = arryDrop[i];
+            
+            if(thisDrop.Id == targetDrop.Id )　continue;
+            var targetTop_Left = new PIXI.Point(targetDrop.x - (targetDrop.width/4),targetDrop.y - (targetDrop.height/4) );
+            var targetTop_Right = new PIXI.Point(targetDrop.x + (targetDrop.width/4),targetTop_Left.y);
+            var targetBottom_Left = new PIXI.Point(targetTop_Left.x,targetDrop.y + (targetDrop.height/4) );
+            var targetBottom_Right = new PIXI.Point(targetTop_Right.x,targetBottom_Left.y);
+            
+            if(thisTop_Left.x >= targetTop_Left.x && 
+               thisTop_Left.x <= targetTop_Right.x && 
+               thisTop_Left.y >= targetTop_Left.y && 
+               thisTop_Left.y <= targetBottom_Left.y)
+            {
+                return targetDrop;
+               break;
+            }
+            else if(thisTop_Right.x >= targetTop_Left.x && 
+                    thisTop_Right.x <= targetTop_Right.x &&
+                    thisTop_Right.y >= targetTop_Left.y &&
+                    thisTop_Right.y <= targetBottom_Left.y) 
+            {
+                return targetDrop;
+               break;
+            }
+            else if(thisBottom_Left.x >= targetTop_Left.x && 
+                    thisBottom_Left.x <= targetTop_Right.x &&
+                    thisBottom_Left.y >= targetTop_Left.y &&
+                    thisBottom_Left.y <= targetBottom_Left.y) 
+            {
+                return targetDrop;
+               break;
+            }
+            else if(thisBottom_Right.x >= targetTop_Left.x &&
+                    thisBottom_Right.x <= targetTop_Right.x &&
+                    thisBottom_Right.y >= targetTop_Left.y &&
+                    thisBottom_Right.y <= targetBottom_Left.y) 
+            {
+                return targetDrop;
+               break;
+            }
+        }
+        return undefined;
+    }
+    
+    //Get combo(Total)
+    function GetCombo()
+    {
+        if(allDrops.length == 0) 
+        {
+            var Ary = [];
+            return Ary;
+        }
+        allDrops = Enumerable.from(allDrops).orderByDescending(xx=> xx.y).thenBy(xx=>xx.x).toArray();
+        var listComboX = getHorizonCombo();
+        var listComboY = getVerticalCombo();
+        var listNearComboX = getNearComboX(listComboX);
+        var listNearComboY = getNearComboY(listComboY);
+        var comboList = getLinkCombo(listNearComboX,listNearComboY);
+        return comboList;
+        
+    }
+    //getHorizonCombo
+    function getHorizonCombo()
+    {
+        //Get All List Horizon
+        var GetXList = Enumerable.from(allDrops).select(xx=>xx.y).distinct().orderByDescending().toArray();
+        var List_x = [];
+        for(var i = 0; i< GetXList.length;i++)
+        {
+            var xList = Enumerable.from(allDrops).where(xx=> xx.y == GetXList[i]).orderBy(xx=> xx.x).toArray();
+            List_x.push(xList);
+        }
+        //SetCombo each XList
+        var ListCombo_x = [];
+        for(var i = 0 ;i<List_x.length;i++)
+        { 
+            var currentList = List_x[i];
+            var GetXListParent = Enumerable.from(currentList).select(xx=> xx.parentGroup).distinct().toArray();
+            for(var j = 0; j<GetXListParent.length;j++)
+            {
+                var currentParentGroup = GetXListParent[j];
+                var cnt = Enumerable.from(currentList).count(xx=> xx.parentGroup == currentParentGroup);
+                if(cnt < 3)
+                {
+                    continue;
+                }
+                var ListNOw = Enumerable.from(currentList).where(xx=> xx.parentGroup == currentParentGroup).toArray();
+                var comboList = [];
+                for(var k = 0; k<ListNOw.length;k++ )
+                {
+                    var thisDrop = ListNOw[k];
+                    if(comboList.length < 1)
+                    {
+                        comboList.push(thisDrop);
+                        continue;
+                    }
+                    if(thisDrop.x - comboList[comboList.length - 1].x >= DropSize + (DropSize/2))
+                    {
+                        if(comboList.length >= 3)
+                        {
+                            comboList.parentGroup = currentParentGroup;
+                            ListCombo_x.push(comboList);
+                            comboList = [];
+                        }
+                        else
+                        {
+                            comboList = [];
+                        }
+                        if(ListNOw.length - k < 3)break;
+                        comboList.push(thisDrop);
+                    }
+                    else
+                    {
+                        comboList.push(thisDrop);
+                    }
+                    if(ListNOw.length - (k+1) == 0 && comboList.length >= 3)
+                    {
+                        comboList.parentGroup = currentParentGroup;
+                        ListCombo_x.push(comboList);
+                    }
+                }
+            }
+        }
+        return ListCombo_x;
+    }
+    //getVerticalCombo
+    function getVerticalCombo()
+    {
+        //SetCombo each YList
+        //Get all list Vertical
+        var GetYList = Enumerable.from(allDrops).select(xx=>xx.x).distinct().orderBy().toArray();
+        var List_y = [];
+        for(var i = 0; i< GetYList.length;i++)
+        {
+            var yList = Enumerable.from(allDrops).where(xx=> xx.x == GetYList[i]).orderByDescending(xx=> xx.y).toArray();
+            List_y.push(yList);
+        }
+        var ListCombo_y = [];
+        for(var i = 0 ;i<List_y.length;i++)
+        { 
+            var currentList = List_y[i];
+            var GetYListParent = Enumerable.from(currentList).select(xx=> xx.parentGroup).distinct().toArray();
+            for(var j = 0; j<GetYListParent.length;j++)
+            {
+                var currentParentGroup = GetYListParent[j];
+                var cnt = Enumerable.from(currentList).count(xx=> xx.parentGroup == currentParentGroup);
+                if(cnt < 3)
+                {
+                    continue;
+                }
+                var ListNOw = Enumerable.from(currentList).where(xx=> xx.parentGroup == currentParentGroup).toArray();
+                var comboList = [];
+                for(var k = 0; k<ListNOw.length;k++ )
+                {
+                    var thisDrop = ListNOw[k];
+                    if(comboList.length < 1)
+                    {
+                        comboList.push(thisDrop);
+                        continue;
+                    }
+                    if(comboList[comboList.length - 1].y - thisDrop.y >= DropSize + (DropSize/2))
+                    {
+                        if(comboList.length >= 3)
+                        {
+                            comboList.parentGroup = currentParentGroup;
+                            ListCombo_y.push(comboList);
+                            comboList = [];
+                        }
+                        else
+                        {
+                            comboList = [];
+                        }
+                        if(ListNOw.length - k < 3)break;
+                        comboList.push(thisDrop);
+                    }
+                    else
+                    {
+                        comboList.push(thisDrop);
+                    }
+                    if(ListNOw.length - (k+1) == 0 && comboList.length >= 3)
+                    {
+                        comboList.parentGroup = currentParentGroup;
+                        ListCombo_y.push(comboList);
+                    }
+                }
+            }
+        }
+        return ListCombo_y;
+    }
+        
+    //Calculate drop with have matched or not(array Type)
+    function getMatching2Array(arry1,arry2)
+    {
+        var IRtn = undefined; 
+        for(var i=0;i<arry2.length;i++)
+        {
+            var cnt = Enumerable.from(arry1).count(xx=> xx == arry2[i]);
+            if(cnt > 0) 
+            {
+                IRtn = arry2[i];
+                break;
+            }
+        }
+        return IRtn;
+    }
+    
+    //getNearComboX
+    function getNearComboX(arryX)
+    {
+        //GetNearCombo
+        var allParent = Enumerable.from(arryX).select(xx=> xx.parentGroup).distinct().toArray();
+        var listNearX = [];
+        for(var i = 0; i < allParent.length;i++)
+        {
+            var combo = Enumerable.from(arryX).where(xx=> xx.parentGroup == allParent[i]).toArray();
+            if(combo.length == 1)
+            {
+                combo[0].parentGroup = allParent[i];
+                listNearX.push(combo[0]);
+                continue;
+            }
+            var multiCombo = [];
+            for(var j = 0; j<combo.length;j++)
+            {
+                var currentCombo = combo[j];
+                if(multiCombo.length < 1)
+                {
+                    currentCombo.parentGroup = allParent[i];
+                    multiCombo.push(currentCombo)
+                }
+                else
+                {
+                    for(var k=0; k<multiCombo.length;k++)
+                    {
+                        var listYPoint = Enumerable.from(multiCombo[k]).select(xx=> xx.y).orderBy().first();
+                        var currentYpoint = Enumerable.from(currentCombo).select(xx=> xx.y).orderBy().first();
+                        if(listYPoint ==currentYpoint)
+                        {
+                            currentCombo.parentGroup = allParent[i];
+                            multiCombo.push(currentCombo);
+                            break;
+                        }
+                        if( listYPoint - currentYpoint > 120 )
+                        {
+                            if(multiCombo.length == k + 1)
+                            {
+                                currentCombo.parentGroup = allParent[i];
+                                multiCombo.push(currentCombo);
+                                break;
+                            }
+                            else
+                            {
+                                continue;
+                            }
+
+                        }
+                        var listCombo = Enumerable.from(multiCombo[k]).select(xx=> xx.x).toArray();
+                        var current = Enumerable.from(currentCombo).select(xx=> xx.x).toArray();
+                        var match = getMatching2Array(listCombo,current);
+                        if(match != undefined)
+                        {
+                            var combineCombo = multiCombo[k].concat(currentCombo);
+                            multiCombo = Enumerable.from(multiCombo).where(xx=> xx != multiCombo[k]).toArray();
+                            multiCombo = Enumerable.from(multiCombo).where(xx=> xx != currentCombo).toArray();
+                            combineCombo.parentGroup = allParent[i];
+                            multiCombo.push(combineCombo);
+                            break;
+                        }
+                        else
+                        {
+                            currentCombo.parentGroup = allParent[i];
+                            multiCombo.push(currentCombo);
+                        }
+                    }   
+                }
+            }
+            if(multiCombo.length > 0)
+            {
+                multiCombo = Enumerable.from(multiCombo).distinct().toArray();
+                for(var xx= 0; xx< multiCombo.length;xx++)
+                {
+                    listNearX.push(multiCombo[xx]);
+                }
+            }
+        }
+        for(var i = 0; i< listNearX.length;i++)
+        {
+            listNearX[i].x = Enumerable.from(listNearX[i]).select(xx=> xx.x).orderBy().first();
+            listNearX[i].y = Enumerable.from(listNearX[i]).select(xx=> xx.y).orderByDescending().first();
+        }
+        listNearX = Enumerable.from(listNearX).orderByDescending(xx=> xx.y).thenBy(xx=>xx.x).toArray();
+        return listNearX;
+    }
+        
+    //getNearComboY
+    function getNearComboY(arryY)
+    {
+        //GetNearCombo
+        var allParent = Enumerable.from(arryY).select(xx=> xx.parentGroup).distinct().toArray();
+        var listNearY = [];
+        for(var i = 0; i < allParent.length;i++)
+        {
+            var combo = Enumerable.from(arryY).where(xx=> xx.parentGroup == allParent[i]).toArray();
+            if(combo.length == 1)
+            {
+                combo[0].parentGroup = allParent[i];
+                listNearY.push(combo[0]);
+                continue;
+            }
+            var multiCombo = [];
+            for(var j = 0; j<combo.length;j++)
+            {
+                var currentCombo = combo[j];
+                if(multiCombo.length < 1)
+                {
+                    currentCombo.parentGroup = allParent[i];
+                    multiCombo.push(currentCombo)
+                }
+                else
+                {
+                    for(var k=0; k<multiCombo.length;k++)
+                    {
+                        var listXpoint = Enumerable.from(multiCombo[k]).select(xx=> xx.x).orderByDescending().first();
+                        var currentXpoint = Enumerable.from(currentCombo).select(xx=> xx.x).orderBy().first();
+                        if(listXpoint ==currentXpoint)
+                        {
+                            currentCombo.parentGroup = allParent[i];
+                            multiCombo.push(currentCombo);
+                            break;
+                        }
+                        if( currentXpoint - listXpoint  > 120 )
+                        {
+                            if(multiCombo.length == k + 1)
+                            {
+                                currentCombo.parentGroup = allParent[i];
+                                multiCombo.push(currentCombo);
+                                break;
+                            }
+                            else
+                            {
+                                continue;
+                            }
+
+                        }
+                        var listCombo = Enumerable.from(multiCombo[k]).select(xx=> xx.y).toArray();
+                        var current = Enumerable.from(currentCombo).select(xx=> xx.y).toArray();
+                        var match = getMatching2Array(listCombo,current);
+                        if(match != undefined)
+                        {
+                            var combineCombo = multiCombo[k].concat(currentCombo);
+                            multiCombo = Enumerable.from(multiCombo).where(xx=> xx != multiCombo[k]).toArray();
+                            multiCombo = Enumerable.from(multiCombo).where(xx=> xx != currentCombo).toArray();
+                            combineCombo.parentGroup = allParent[i];
+                            multiCombo.push(combineCombo);
+                            break;
+                        }
+                        else
+                        {
+                            currentCombo.parentGroup = allParent[i];
+                            multiCombo.push(currentCombo);
+                        }
+                    }   
+                }
+            }
+            if(multiCombo.length > 0)
+            {
+                multiCombo = Enumerable.from(multiCombo).distinct().toArray();
+                for(var xx= 0; xx< multiCombo.length;xx++)
+                {
+                    listNearY.push(multiCombo[xx]);
+                }
+            }
+        }
+        for(var i = 0; i< listNearY.length;i++)
+        {
+            listNearY[i].x = Enumerable.from(listNearY[i]).select(xx=> xx.x).orderBy().first();
+            listNearY[i].y = Enumerable.from(listNearY[i]).select(xx=> xx.y).orderByDescending().first();
+        }
+        listNearY = Enumerable.from(listNearY).orderByDescending(xx=> xx.y).thenBy(xx=>xx.x).toArray();
+        return listNearY;
+    }
+    
+    //getLinkCombo
+    function getLinkCombo(arryX,arryY)
+    {
+        //Get Link Combo
+        var ListJoinXYCombo = arryX.concat(arryY);
+        for(var i = 0; i< ListJoinXYCombo.length;i++)
+        {
+            ListJoinXYCombo[i].x = Enumerable.from(ListJoinXYCombo[i]).select(xx=> xx.x).orderBy().first();
+            ListJoinXYCombo[i].y = Enumerable.from(ListJoinXYCombo[i]).select(xx=> xx.y).orderByDescending().first();
+        }
+        ListJoinXYCombo = Enumerable.from(ListJoinXYCombo).orderByDescending(xx=> xx.y).thenBy(xx=>xx.x).toArray();
+        var allParent = Enumerable.from(ListJoinXYCombo).select(xx=> xx.parentGroup).distinct().toArray();
+        var comboList = [];
+        for(var i = 0; i < allParent.length;i++)
+        {
+            var currentList = Enumerable.from(ListJoinXYCombo).where(xx=> xx.parentGroup == allParent[i]).toArray();
+            var multiCombo = [];
+            for(var j=0;j < currentList.length;j++)
+            {
+                var currentCombo = currentList[j];
+                if(multiCombo.length == 0)
+                {
+                    currentCombo.parentGroup = allParent[i];
+                    multiCombo.push(currentCombo)
+                }
+                else
+                {
+                    for(var k = 0; k<multiCombo.length;k++ )
+                    {
+                        var ListId = Enumerable.from(multiCombo[k]).select(xx=> xx.Id).distinct().toArray();
+                        var currentId= Enumerable.from(currentCombo).select(xx=> xx.Id).distinct().toArray();
+                        var ret = getMatching2Array(ListId,currentId);
+                        if(ret != undefined)
+                        {
+                            var combineCombo = multiCombo[k].concat(currentCombo);
+                            multiCombo = Enumerable.from(multiCombo).where(xx=> xx != multiCombo[k]).toArray();
+                            multiCombo = Enumerable.from(multiCombo).where(xx=> xx != currentCombo).toArray();
+                            combineCombo.parentGroup = allParent[i];
+                            multiCombo.push(combineCombo);
+                            break;
+                        }
+                        else
+                        {
+                            currentCombo.parentGroup = allParent[i];
+                            multiCombo.push(currentCombo);
+                            break;
+                        }
+                    }
+                }
+            }
+            if(multiCombo.length > 0)
+            {
+                multiCombo = Enumerable.from(multiCombo).distinct().toArray();
+                for(var xx= 0; xx< multiCombo.length;xx++)
+                {
+                    comboList.push(multiCombo[xx]);
+                }
+            }
+        }
+        
+        var allParent = Enumerable.from(comboList).select(xx=> xx.parentGroup).distinct().toArray(); 
+        for(var z = 0; z < mapY;z++)
+        {
+            for(var i = 0; i < allParent.length;i++)
+            {
+                var currentList = Enumerable.from(comboList).where(xx=> xx.parentGroup == allParent[i]).toArray();
+                var loop = currentList.length;
+                for(var j=0;j <loop ;j++)
+                {
+                    var next = j + 1;
+                    if(next == loop)
+                    {
+                        next = j;
+                    }
+                    var ListId = Enumerable.from(currentList[j]).select(xx=> xx.Id).distinct().toArray();
+                    var currentId= Enumerable.from(currentList[next]).select(xx=> xx.Id).distinct().toArray();
+                    var ret = getMatching2Array(ListId,currentId);
+                    if(ret != undefined && next!= j)
+                    {
+                        var combineCombo = currentList[j].concat(currentList[next]);
+                        comboList = Enumerable.from(comboList).where(xx=> xx != currentList[j]).toArray();
+                        comboList = Enumerable.from(comboList).where(xx=> xx != currentList[next]).toArray();
+                        combineCombo.parentGroup = allParent[i];
+                        comboList.push(combineCombo);
+                        break;
+                    }
+            }
+        }
+        for(var i = 0; i< comboList.length;i++)
+        {
+            comboList[i].x = Enumerable.from(comboList[i]).select(xx=> xx.x).orderBy().first();
+            comboList[i].y = Enumerable.from(comboList[i]).select(xx=> xx.y).orderByDescending().first();
+        }
+        comboList = Enumerable.from(comboList).orderByDescending(xx=> xx.y).thenBy(xx=>xx.x).toArray();
+        return comboList;
+        }
+    }
+    //ResetPosition
+    function ResetPosition(arry)
+    {
+        var objList = arry;
+        var listX = Enumerable.from(arry).select(xx=>xx.x).distinct().orderBy().toArray();
+        for(var i =0;i< listX.length; i++)
+        {
+            var list = Enumerable.from(arry).where(xx=>xx.x == listX[i]).toArray();
+            list = Enumerable.from(list).orderByDescending(xx=>xx.y).toArray();
+            if(list.length == mapY) continue;
+            for(var k = 0; k < list.length;k++)
+            {
+                for(var j =0;j<mapY;j++)
+                {
+                    var pointY = (((mapY-1) - j) * DropSize) + (DropSize/2);
+                    
+                    var minHeight = Enumerable.from(list).select(xx => xx.y).distinct().orderBy().first(); 
+                    var minHeight_2 = 999;
+                    if(Enumerable.from(list).count(xx => xx.moveTarget != undefined)> 0)
+                    {
+                        minHeight_2 = Enumerable.from(list).where(xx => xx.moveTarget != undefined).select(xx => xx.moveTarget).orderBy().first();
+                    }
+                    minHeight = (minHeight > minHeight_2)? minHeight_2:minHeight;
+                    
+                    if(minHeight > pointY) break;
+                    if(list[k].y == pointY) break;
+                    
+                    if(Enumerable.from(list).count(xx => xx.y == pointY && xx.moveTarget == undefined ) > 0) continue;
+                    if(Enumerable.from(list).count(xx => xx.moveTarget == pointY) > 0) continue;
+                    
+                    if(list[k].moveTarget == pointY) break;
+                    
+                    list[k].moveTarget = pointY;
+                    break;
+                }
+            }
+        }
+    }
+     //removeDrop   
+    function removeDrop()
+    {
+        if(flgMoving == false)
+        {
+            allCombo = GetCombo();
+            flgStartMoving = false;
+        }
+        if(allCombo.length > 0 && ( Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined) ==  0))
+        {
+            
+            for(var i = 0; i<allCombo.length;i++ )
+            {
+                if(allCombo[i][0].alpha == 1)
+                {
+                    countComboForText += 1;
+                   handleRemove();
+                }
+                for(var j = 0;j <allCombo[i].length;j++)
+                {
+                    allCombo[i][j].alpha -= 0.04; 
+                }
+                if(allCombo[i][0].alpha > 0) return;  
+                for(var j = 0;j <allCombo[i].length;j++)
+                {
+                    containRect.removeChild(allCombo[i][j])
+                    allDrops = Enumerable.from(allDrops).where(xx=> xx !=allCombo[i][j] ).toArray();
+                    allDrops = Enumerable.from(allDrops).distinct().toArray();
+                }
+                var xList = Enumerable.from(allCombo[i]).select(xx=> xx.x).distinct().orderBy().toArray();
+                var yList = Enumerable.from(allCombo[i]).select(xx=> xx.y).distinct().orderBy().toArray();
+                var pointX =  xList[0] + ((xList[xList.length-1] - xList[0]) / 2);
+                var pointY = yList[0] + ((yList[yList.length-1] - yList[0]) / 2);
+                var txt = countComboForText + ' combos';
+                var msg = commPIXI.Setmsg(txt,pointX,pointY,24);
+                msg.parentGroup = groupText;
+                msg.Id = countComboForText;
+                containText.addChild(msg);
+                tweenText(msg);
+            }
+            allCombo = [];            
+
+        }
+              
+        if(allCombo.length == 0 && containText.children.length > 0  && allDrops.length == (mapX*mapY) )
+        {
+            containText.children = Enumerable.from(containText.children).orderBy(xx=> xx.Id).toArray();
+            handlePowerUp();
+            containText.removeChildren();
+            if(containText.children.length == 0 && countComboForText <= maxCombo)
+            {
+                tweenHp(teamHpCover);
+                tweenHp(teamHp);
+                teamHp.width  -= hpBoss/5;   
+            }
+            return;
+               
+        }  
+
+        if(allDrops.length <  (mapX*mapY) )
+        { 
+            if( Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined)== 0)
+            {
+                ResetPosition(allDrops);
+            }
+            if( Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined)> 0)
+            {
+                var move = Enumerable.from(allDrops).where(xx=> xx.moveTarget !=  undefined).toArray();
+                for(var i = 0; i<move.length;i++)
+                {
+                    createjs.Tween.get(move[i])
+                    .to({ y : move[i].moveTarget }, 300, createjs.Ease.circOut)
+                    .call(function(){this.moveTarget = undefined;})
+                    .call(handleComplete);
+                }
+            }
+            else
+            {
+                handleComplete();
+            }
+        }
+    }
+    
+    function handleComplete()
+    {
+        if(Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined)== 0 && allDrops.length <  (mapX*mapY))
+        {
+            flgMoving = false;
+            var flg = SetDrop();
+            allCombo = GetCombo();
+        }
+    }
+    //tgg
+    function moveEgg(sprite)
+    {
+        
+        let org_rotation = sprite.rotation;
+        createjs.Tween.get(sprite,{ loop: true })
+        .to({ rotation : org_rotation +0.2 }, 300, createjs.Ease.getPowInOut(4))
+        .to({  rotation : org_rotation - 0.2 }, 300, createjs.Ease.getPowInOut(2))
+        .to({  rotation : org_rotation}, 300, createjs.Ease.getPowInOut(2))
+    }
+    //text 
+    function tweenText(spriteText)
+    {
+        let orgWidth = spriteText.width;
+        let orgHeight = spriteText.height;
+        createjs.Tween.get(spriteText)
+        .to({ width : 150 ,height : 97 }, 500, createjs.Ease.getPowInOut(4))
+        .to({ width : orgWidth ,height : orgHeight }, 500, createjs.Ease.getPowInOut(2))
+    }
+    //hp
+    function tweenHp(spriteHp)
+    {
+        let orgX = spriteHp.x;
+        let orgY = spriteHp.y;
+        createjs.Tween.get(spriteHp)
+        .to({ x : orgX + 10 }, 100, createjs.Ease.getPowInOut(2))
+        .to({ x : orgX - 10 }, 100, createjs.Ease.getPowInOut(2))
+        .to({ x : orgX }, 100, createjs.Ease.getPowInOut(2))
+    }
+    //drops
+    function tweenDrops(spriteHp,pointY)
+    {
+        let orgY = spriteHp.y;
+        createjs.Tween.get(spriteHp)
+        .to({ y : pointY }, 100, createjs.Ease.getPowInOut(2))
+    }
+    //BGM
+    function handleLoadComplete(event)
+    {
+       audio = createjs.Sound.play("sound",{loop:-1});
+        audio.volume = 0.7;
+    }
+    //BGM Game Clear
+    function handleLoadGameWin(event)
+    {
+       var gameWin = createjs.Sound.play("gameWin");
+    }
+    //BGM Drop move
+    function handleMoving(event)
+    {
+       audioMoving = createjs.Sound.play("soundMove");
+    }
+    //BGM drop Remove  
+    function handleRemove(event)
+    {
+        // 音源の「Tone.Synth()」を作り、マスター出力に接続
+        let cnt =countComboForText - 1;
+        //Just Testing Look like same however set it
+        var synth = new Tone.Synth({
+                    oscillator:{
+                    // 波形の設定
+                        type:"sine"
+                    },
+                    // エンベロープ(ADSR)の設定
+                        envelope:{
+                        attack:0.005,
+                        decay:0.1,
+                        sustain:0.3,
+                        release:1
+                    }
+                    }).toMaster();
+        // 中央の「ド(C4)」を4分音符で発音する
+        synth.triggerAttackRelease( toneArray[cnt], '8n' );
+    } 
+    //BGM Combo Count 
+    function handlePowerUp(event)
+    {
+       var audioPowerUp = createjs.Sound.play('powerUp');
+    }
+    //BGM Game Over
+    function handleGameOver(event)
+    {
+       var gameOverSound = createjs.Sound.play('gameOverSound');
+    }
+     
+	</script>
+</body>
+</html>
