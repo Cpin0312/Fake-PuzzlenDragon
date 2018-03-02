@@ -75,7 +75,9 @@
     createjs.Sound.registerSound({src:"src/sounds/powerUp.mp3", id:"powerUp"});
     createjs.Sound.registerSound({src:"src/sounds/gameOver.mp3", id:"gameOverSound"});
     createjs.Sound.registerSound({src:"src/sounds/gameWin.mp3", id:"gameWin"});
- 
+    createjs.Sound.registerSound({src:"src/sounds/damage.mp3", id:"damage"});
+    //Play BackGroup BGM
+    createjs.Sound.on("fileload", this.handleLoadComplete, this);
         
     var dropFire ;
     var dropEarth ;
@@ -87,8 +89,12 @@
     var audioMoving ;
     var flg3Times = false;
     var flgNoCombo = false;
-    let startTime ;
+    //startMoveTime
+    let startTime = undefined;
+    //MovingTime
+    let timeNow = undefined;
     let hpBoss ;
+    const lifePoint = 23456;
     var loopCount = 0;
 
     //image Name
@@ -105,9 +111,15 @@
     var egg ;
     var enemyHpTexture;
     var dataSave;
+    var viewHp;
+    var touch1;
+    var touch2;
+    var showTouch;
+        
     let maxMonsterHp;
         
-    var holdingTime = 800000;
+        
+    const holdingTime = 10000;
     var countComboForText = 0;
     var delay_1 = 0;
         
@@ -123,8 +135,10 @@
     var toneArray = ['E4','F4','F#4','G4','G#4','A4','A#4','B4',
                      'C5','C#5','D5','D#5','E5','F5','F#5','G5','G#5','A5','A#5','B5',
                      'C6','C#6','D6','D#6','E6','F6','F#6','G6','G#6','A6','A#6','B6',
-                     'C7','C#7','D7','D#7','E7','F7','F#7','G7','G#7','A7','A#7','B7']
-        
+                     'C7','C#7','D7','D#7','E7','F7','F#7','G7','G#7','A7','A#7','B7',
+                     'C8','C#8','D8','D#8','E8','F8','F#8','G8','G#8','A8','A#8','B8']
+    
+    
     PIXI.loader
         .add('src/images/PuzzleDragons.json')
         .add('src/images/background.json')
@@ -139,14 +153,16 @@
         .add('gameOver','src/images/gameOver.png')
         .add('clear','src/images/clear.png')
         .add('egg','src/images/egg.png')
+        
+        .add('touch','src/images/touch.png')
+        .add('touch1','src/images/touch1.png')
+        .add('fingerLife','src/images/fingerLife.png')
         .load(setup);
     
     //StartUp Setting
     function setup(loader,resources)
     {	
 		dataSave = store.get('user')
-        //Play BackGroup BGM
-        handleLoadComplete();   
         //set Battle BackGroup
         topbackGroup = new PIXI.Sprite(resources.topbackgroup.texture);
         topbackGroup.width = DropSize*mapX;
@@ -226,6 +242,18 @@
         combo9.y = 50;
         combo9.parentGroup = groupTop;
         containTop.addChild(combo9);
+        //viewHp
+        var life = Math.floor(lifePoint * (teamHp.width/ hpBoss));
+        viewHp = commPIXI.SetHp(life + '/' + lifePoint,teamHpCover.width * (13/15),teamHpCover.y + 20);
+        viewHp.parentGroup = groupTop;
+        containTop.addChild(viewHp);
+        //touch
+        touch1 = new PIXI.Sprite(resources.touch.texture);
+        touch1.parentGroup = groupTop;
+        touch2 = new PIXI.Sprite(resources.touch1.texture);
+        touch2.parentGroup = groupTop;
+        
+
         //Game Over scene
         gameOver = new PIXI.Sprite(resources.gameOver.texture);
         gameOver.scale.x *= 1.5;
@@ -381,6 +409,38 @@
     function gameLoop()
     {
         requestAnimationFrame(gameLoop);
+        //Testing
+//        if(startTime != undefined)
+//        {
+//            if(timeNow == undefined)  timeNow = new Date();
+//            else
+//            {
+//                if(timeNow - startTime >holdingTime - 3000)
+//                {
+//                   if(showTouch == undefined) showTouch = touch1;
+//                   if(showTouch == touch1) showTouch = touch2;
+//                   else{showTouch = touch2;}
+//                   containTop.addChild(showTouch);
+//                }
+//                if(timeNow - startTime >holdingTime )
+//                {
+//                    this.scale.x /= 1.1;
+//                    this.scale.y /= 1.1;
+//                    this.parentGroup = this.org_parentGroup;
+//                    this.x = this.org_position_x;
+//                    this.y = this.org_position_y;
+//                    this.flgDragging = false;
+//                    flgDragging = false  ;
+//                    flgMoveUptoDown = true;
+//                    loopCount = 0;
+//                    containTop.removeChild(showTouch);
+//                    showTouch = undefined;
+//                    startTime = undefined;
+//                    timeNow = undefined
+//                }
+//            }
+//        }
+        
         //Only First time
         if(flgStartUp == true)
         {
@@ -505,6 +565,7 @@
                 enemyHp.scale.x /= 1.35;
                 enemyHp.scale.y /= 1.3;
                 enemyHp.parentGroup = groupTop;
+                
                 containTop.addChild(enemyHp);
             }
             else
@@ -600,8 +661,6 @@
         if(flgStartMoving == true) return ;
         if(this.flgDragging != true && flgStartUp == false)
         {
-            
-            startTime = new Date();
             countComboForText = 0;
             flgMoveUptoDown = false;
             flgDragging = true;
@@ -632,6 +691,10 @@
             flgDragging = false  ;
             flgMoveUptoDown = true;
             loopCount = 0;
+            containTop.removeChild(showTouch);
+            showTouch = undefined;
+            startTime = undefined;
+            timeNow = undefined
         }
     }
     //Mouse Move
@@ -639,12 +702,13 @@
     {
        if(this.flgDragging == true)
         {
-            const timeNow = new Date();
+            timeNow = new Date();
             var mousePst = this.data.getLocalPosition(this.parent);
             this.position.set(mousePst.x,mousePst.y);
             var result = hitDrop(this,allDrops);
             if( result != undefined)
             {
+                if(startTime == undefined)  startTime = new Date();
                 handleMoving();
                 if(audioMoving.playState == 'playFinished')
                 {
@@ -675,7 +739,11 @@
                 this.flgDragging = false;
                 flgDragging = false  ;
                 flgMoveUptoDown = true;
-
+                loopCount = 0;
+                containTop.removeChild(showTouch);
+                showTouch = undefined;
+                startTime = undefined;
+                timeNow = undefined
             }
         }
     }
@@ -1218,6 +1286,7 @@
         //Move with no combo
         if(flgStartMoving == true && allCombo.length == 0 && allDrops.length == (mapX*mapY) && loopCount==1)
         {
+            handledDamage();
             tweenHp(teamHpCover);
             tweenHp(teamHp);
             teamHp.width = (teamHp.width < (hpBoss/5)) ? 0 :teamHp.width  -= (hpBoss/5);
@@ -1232,6 +1301,9 @@
             }
             store.set('user', { enemyHp:tEnemyHp, teamHp : teamHp.width});
             flgStartMoving = false;
+            
+            var life = Math.floor(lifePoint * (teamHp.width / hpBoss));
+            viewHp.text = life + '/' + lifePoint;
             return;
         }
         if(allCombo.length > 0 && ( Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined) ==  0))
@@ -1275,6 +1347,8 @@
             containText.removeChildren();
             if(containText.children.length == 0 && countComboForText <= maxCombo)
             {
+                
+                handledDamage();
                 tweenHp(teamHpCover);
                 tweenHp(teamHp);
                 teamHp.width = (teamHp.width < (hpBoss/5)) ? 0 :teamHp.width  -= (hpBoss/5);
@@ -1289,6 +1363,9 @@
                 }
                 
 				store.set('user', { enemyHp:tEnemyHp, teamHp : teamHp.width});
+                
+                var life = Math.floor(lifePoint * (teamHp.width / hpBoss));
+                viewHp.text = life + '/' + lifePoint;
             }
             flgStartMoving = false;
             return;
@@ -1410,6 +1487,11 @@
     function handleGameOver(event)
     {
        var gameOverSound = createjs.Sound.play('gameOverSound');
+    }
+    //BGM Damage
+    function handledDamage(event)
+    {
+       var damage = createjs.Sound.play('damage');
     }
      
 	</script>
