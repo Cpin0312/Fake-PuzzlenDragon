@@ -15,20 +15,18 @@
 <script src = 'lib/store.legacy.min.js'></script>
 <body >
 	<script type = 'text/javascript'>
-    //initail Data
+    //initial Data
     var mapX =6;
     var mapY = 5;    
     var maxCombo = 9;
-
     const DropSize = 80;
-        
     var totalDrops = mapX * mapY;
     var comm = new commonMethod();
     var commPIXI = new commonPIXI(PIXI);
     var allDrops = [];
     var allCombo = []; 
-    //var app = new PIXI.Application(DropSize*mapX,DropSize*mapY + 350,{backgroundColor :  comm.GetColor('Black')});
-    var app = new PIXI.Application(window.innerHeight * (2.5/4),window.innerHeight - 50 ,{backgroundColor :  comm.GetColor('Black')});
+    //var app = new PIXI.Application(DropSize*mapX,DropSize*mapY + 350,{backgroundColor :  comm.GetColorCode('Black')});
+    var app = new PIXI.Application(window.innerHeight * (2.5/4),window.innerHeight - 50 ,{backgroundColor :  comm.GetColorCode('Black')});
     
     document.body.appendChild(app.view);
         
@@ -87,8 +85,7 @@
     var audio;
     var HpMonster;
     var audioMoving ;
-    var flg3Times = false;
-    var flgNoCombo = false;
+    
     //startMoveTime
     let startTime = undefined;
     //MovingTime
@@ -118,19 +115,17 @@
         
     let maxMonsterHp;
         
-        
-    const holdingTime = 10000;
+    const holdingTime = 100000;
     var countComboForText = 0;
     var delay_1 = 0;
-        
-    let gameOverFlg = false; 
-    let gameWinFlg = false; 
     var flgDragging = false;
     var flgStartUp = true;
     //When Seleted drog hit with other drop, start countTime
-    var flgStartMoving = false;
+    var flgBlockMoving = false;
     //Start moving for new drops
     var flgMoveUptoDown = false;
+    let gameOverFlg = false; 
+    let gameWinFlg = false; 
     //set Tone
     var toneArray = ['E4','F4','F#4','G4','G#4','A4','A#4','B4',
                      'C5','C#5','D5','D#5','E5','F5','F#5','G5','G#5','A5','A#5','B5',
@@ -306,7 +301,7 @@
             }
             if(allDrops.length == 0) continue;
             //Get Remove Able Combo
-            allCombo = GetCombo();
+            allCombo = comm.GetCombo(allDrops);
             if(allCombo.length == 0)
             {
                 //stop infinity Loop
@@ -398,7 +393,7 @@
             Drop.height = DropSize;
             Drop.Id = i;
             //Set button event to each spirite
-            subscribe(Drop);
+            comm.subscribe(Drop);
             allDrops.push(Drop);
             ret = true;
         }
@@ -505,11 +500,11 @@
                 {
                     if(containText.children[i].style.fill == 'red')
                     {
-                        containText.children[i] = SetmsgColor(containText.children[i],'white',24);
+                        containText.children[i].style.fill = 'white';
                     }
                     else
                     {
-                        containText.children[i] = SetmsgColor(containText.children[i],'red',24);
+                        containText.children[i].style.fill = 'red';
                     }
                 }
             }
@@ -532,11 +527,11 @@
             gameOver.y = 530;
             containTop.addChild(gameOver);
 			// Clear all keys
-			store.set('user', { enamyHp:undefined ,teamHp:undefined });
+			storeData(undefined,undefined);
 			gameOverFlg = true;
         }
         //if over 9combos 
-        if(countComboForText > maxCombo && containText.children == 0 && flg3Times == true)
+        if(countComboForText > maxCombo && containText.children == 0 )
         {
             tweenHp(enemyHp);
             tweenHp(enemyHpCover);
@@ -557,8 +552,7 @@
                 {
                     tTempHp = teamHp.width
                 }
-				store.set('user', { enemyHp:(enemyHpTexture.baseTexture.width/3)*(remainPercentage-1), teamHp : tTempHp });
-				
+				storeData((enemyHpTexture.baseTexture.width/3)*(remainPercentage-1),tTempHp);
                 var tempSprite = new PIXI.Sprite(tempTexture);
                 tempSprite.position = enemyHp.position;
                 enemyHp = tempSprite;
@@ -571,10 +565,9 @@
             else
             {
                 enemyHp.width = 0;
-                countComboForText = 0;
                 gameWinFlg = true;
             }
-            flg3Times =false;
+            countComboForText = 0;
 
         }
         // if win the game
@@ -598,7 +591,7 @@
                     egg.y = 180;
                     containTop.addChild(egg);
 					// Clear all keys
-				store.set('user', { enemyHp:undefined, teamHp : undefined});
+            	storeData(undefined,undefined);
 					
                 }
             }
@@ -626,39 +619,18 @@
                         clearStage.y = 50;
                         containTop.addChild(clearStage);
                         gameWinFlg = false;
-                        flgStartMoving = true;
+                        flgBlockMoving = true;
                     }
                 }
             }
         }
     }
+     
         
-    function SetmsgColor(textSprite,color)
-    {
-        var sprite_Text = textSprite;
-        sprite_Text.style = {
-            fontFamily: "BauHaus 93",
-            fontSize: 24,
-            fill: color,
-            stroke: '#000000',
-            strokeThickness: 4,
-        };
-        return sprite_Text;
-    }
-        
-    //Set Mouse Event
-    function subscribe(obj)
-    {
-        obj.interactive = true;
-        obj.buttonMode= true;
-        obj.on('pointerdown',dragDown);
-        obj.on('pointerup',dragUp);
-        obj.on('pointermove',dragMove);
-    }
     // MouseClick
     function dragDown(event)
     {
-        if(flgStartMoving == true) return ;
+        if(flgBlockMoving == true) return ;
         if(this.flgDragging != true && flgStartUp == false)
         {
             countComboForText = 0;
@@ -705,7 +677,7 @@
             timeNow = new Date();
             var mousePst = this.data.getLocalPosition(this.parent);
             this.position.set(mousePst.x,mousePst.y);
-            var result = hitDrop(this,allDrops);
+            var result = comm.hitDrop(this,allDrops);
             if( result != undefined)
             {
                 if(startTime == undefined)  startTime = new Date();
@@ -724,567 +696,35 @@
                 result.y = this.org_position_y;
                 this.org_position_x = result.org_position_x;
                 this.org_position_y = result.org_position_y;
-                flgStartMoving = true;
-                flg3Times = true;
-                flgNoCombo = true;
+                flgBlockMoving = true;
             }
-            if(timeNow - startTime >holdingTime )
-            {
-                e.stopPropagation();
-                this.scale.x /= 1.1;
-                this.scale.y /= 1.1;
-                this.parentGroup = this.org_parentGroup;
-                this.x = this.org_position_x;
-                this.y = this.org_position_y;
-                this.flgDragging = false;
-                flgDragging = false  ;
-                flgMoveUptoDown = true;
-                loopCount = 0;
-                containTop.removeChild(showTouch);
-                showTouch = undefined;
-                startTime = undefined;
-                timeNow = undefined
-            }
+        }
+        if(startTime != undefined && timeNow - startTime >holdingTime )
+        {
+            e.stopPropagation();
+            this.scale.x /= 1.1;
+            this.scale.y /= 1.1;
+            this.parentGroup = this.org_parentGroup;
+            this.x = this.org_position_x;
+            this.y = this.org_position_y;
+            this.flgDragging = false;
+            flgDragging = false  ;
+            flgMoveUptoDown = true;
+            loopCount = 0;
+            containTop.removeChild(showTouch);
+            showTouch = undefined;
+            startTime = undefined;
+            timeNow = undefined
         }
     }
     
-    //Calculate drop with have mmatched or not
-    function hitDrop(draggedDrop,arryDrop)
-    {
-        var thisDrop = draggedDrop;
-        var arryDrop = arryDrop;
-        var thisTop_Left = new PIXI.Point(thisDrop.x - (thisDrop.width/4) ,thisDrop.y - (thisDrop.height/4) );
-        var thisTop_Right = new PIXI.Point(thisDrop.x + (thisDrop.width/4) ,thisTop_Left.y);
-        var thisBottom_Left = new PIXI.Point(thisTop_Left.x,thisDrop.y + (thisDrop.height/4) );
-        var thisBottom_Right = new PIXI.Point(thisTop_Right.x,thisBottom_Left.y);
-        var returnDrop = undefined;
-        
-        for(var i=0; i< arryDrop.length;i++)
-        {
-            var targetDrop = arryDrop[i];
-            
-            if(thisDrop.Id == targetDrop.Id )　continue;
-            var targetTop_Left = new PIXI.Point(targetDrop.x - (targetDrop.width/4),targetDrop.y - (targetDrop.height/4) );
-            var targetTop_Right = new PIXI.Point(targetDrop.x + (targetDrop.width/4),targetTop_Left.y);
-            var targetBottom_Left = new PIXI.Point(targetTop_Left.x,targetDrop.y + (targetDrop.height/4) );
-            var targetBottom_Right = new PIXI.Point(targetTop_Right.x,targetBottom_Left.y);
-            
-            if(thisTop_Left.x >= targetTop_Left.x && 
-               thisTop_Left.x <= targetTop_Right.x && 
-               thisTop_Left.y >= targetTop_Left.y && 
-               thisTop_Left.y <= targetBottom_Left.y)
-            {
-                return targetDrop;
-               break;
-            }
-            else if(thisTop_Right.x >= targetTop_Left.x && 
-                    thisTop_Right.x <= targetTop_Right.x &&
-                    thisTop_Right.y >= targetTop_Left.y &&
-                    thisTop_Right.y <= targetBottom_Left.y) 
-            {
-                return targetDrop;
-               break;
-            }
-            else if(thisBottom_Left.x >= targetTop_Left.x && 
-                    thisBottom_Left.x <= targetTop_Right.x &&
-                    thisBottom_Left.y >= targetTop_Left.y &&
-                    thisBottom_Left.y <= targetBottom_Left.y) 
-            {
-                return targetDrop;
-               break;
-            }
-            else if(thisBottom_Right.x >= targetTop_Left.x &&
-                    thisBottom_Right.x <= targetTop_Right.x &&
-                    thisBottom_Right.y >= targetTop_Left.y &&
-                    thisBottom_Right.y <= targetBottom_Left.y) 
-            {
-                return targetDrop;
-               break;
-            }
-        }
-        return undefined;
-    }
-    
-    //Get combo(Total)
-    function GetCombo()
-    {
-        if(allDrops.length == 0) 
-        {
-            var Ary = [];
-            return Ary;
-        }
-        allDrops = Enumerable.from(allDrops).orderByDescending(xx=> xx.y).thenBy(xx=>xx.x).toArray();
-        var listComboX = getHorizonCombo();
-        var listComboY = getVerticalCombo();
-        var listNearComboX = getNearComboX(listComboX);
-        var listNearComboY = getNearComboY(listComboY);
-        var comboList = getLinkCombo(listNearComboX,listNearComboY);
-        return comboList;
-        
-    }
-    //getHorizonCombo
-    function getHorizonCombo()
-    {
-        //Get All List Horizon
-        var GetXList = Enumerable.from(allDrops).select(xx=>xx.y).distinct().orderByDescending().toArray();
-        var List_x = [];
-        for(var i = 0; i< GetXList.length;i++)
-        {
-            var xList = Enumerable.from(allDrops).where(xx=> xx.y == GetXList[i]).orderBy(xx=> xx.x).toArray();
-            List_x.push(xList);
-        }
-        //SetCombo each XList
-        var ListCombo_x = [];
-        for(var i = 0 ;i<List_x.length;i++)
-        { 
-            var currentList = List_x[i];
-            var GetXListParent = Enumerable.from(currentList).select(xx=> xx.parentGroup).distinct().toArray();
-            for(var j = 0; j<GetXListParent.length;j++)
-            {
-                var currentParentGroup = GetXListParent[j];
-                var cnt = Enumerable.from(currentList).count(xx=> xx.parentGroup == currentParentGroup);
-                if(cnt < 3)
-                {
-                    continue;
-                }
-                var ListNOw = Enumerable.from(currentList).where(xx=> xx.parentGroup == currentParentGroup).toArray();
-                var comboList = [];
-                for(var k = 0; k<ListNOw.length;k++ )
-                {
-                    var thisDrop = ListNOw[k];
-                    if(comboList.length < 1)
-                    {
-                        comboList.push(thisDrop);
-                        continue;
-                    }
-                    if(thisDrop.x - comboList[comboList.length - 1].x >= DropSize + (DropSize/2))
-                    {
-                        if(comboList.length >= 3)
-                        {
-                            comboList.parentGroup = currentParentGroup;
-                            ListCombo_x.push(comboList);
-                            comboList = [];
-                        }
-                        else
-                        {
-                            comboList = [];
-                        }
-                        if(ListNOw.length - k < 3)break;
-                        comboList.push(thisDrop);
-                    }
-                    else
-                    {
-                        comboList.push(thisDrop);
-                    }
-                    if(ListNOw.length - (k+1) == 0 && comboList.length >= 3)
-                    {
-                        comboList.parentGroup = currentParentGroup;
-                        ListCombo_x.push(comboList);
-                    }
-                }
-            }
-        }
-        return ListCombo_x;
-    }
-    //getVerticalCombo
-    function getVerticalCombo()
-    {
-        //SetCombo each YList
-        //Get all list Vertical
-        var GetYList = Enumerable.from(allDrops).select(xx=>xx.x).distinct().orderBy().toArray();
-        var List_y = [];
-        for(var i = 0; i< GetYList.length;i++)
-        {
-            var yList = Enumerable.from(allDrops).where(xx=> xx.x == GetYList[i]).orderByDescending(xx=> xx.y).toArray();
-            List_y.push(yList);
-        }
-        var ListCombo_y = [];
-        for(var i = 0 ;i<List_y.length;i++)
-        { 
-            var currentList = List_y[i];
-            var GetYListParent = Enumerable.from(currentList).select(xx=> xx.parentGroup).distinct().toArray();
-            for(var j = 0; j<GetYListParent.length;j++)
-            {
-                var currentParentGroup = GetYListParent[j];
-                var cnt = Enumerable.from(currentList).count(xx=> xx.parentGroup == currentParentGroup);
-                if(cnt < 3)
-                {
-                    continue;
-                }
-                var ListNOw = Enumerable.from(currentList).where(xx=> xx.parentGroup == currentParentGroup).toArray();
-                var comboList = [];
-                for(var k = 0; k<ListNOw.length;k++ )
-                {
-                    var thisDrop = ListNOw[k];
-                    if(comboList.length < 1)
-                    {
-                        comboList.push(thisDrop);
-                        continue;
-                    }
-                    if(comboList[comboList.length - 1].y - thisDrop.y >= DropSize + (DropSize/2))
-                    {
-                        if(comboList.length >= 3)
-                        {
-                            comboList.parentGroup = currentParentGroup;
-                            ListCombo_y.push(comboList);
-                            comboList = [];
-                        }
-                        else
-                        {
-                            comboList = [];
-                        }
-                        if(ListNOw.length - k < 3)break;
-                        comboList.push(thisDrop);
-                    }
-                    else
-                    {
-                        comboList.push(thisDrop);
-                    }
-                    if(ListNOw.length - (k+1) == 0 && comboList.length >= 3)
-                    {
-                        comboList.parentGroup = currentParentGroup;
-                        ListCombo_y.push(comboList);
-                    }
-                }
-            }
-        }
-        return ListCombo_y;
-    }
-        
-    //Calculate drop with have matched or not(array Type)
-    function getMatching2Array(arry1,arry2)
-    {
-        var IRtn = undefined; 
-        for(var i=0;i<arry2.length;i++)
-        {
-            var cnt = Enumerable.from(arry1).count(xx=> xx == arry2[i]);
-            if(cnt > 0) 
-            {
-                IRtn = arry2[i];
-                break;
-            }
-        }
-        return IRtn;
-    }
-    
-    //getNearComboX
-    function getNearComboX(arryX)
-    {
-        //GetNearCombo
-        var allParent = Enumerable.from(arryX).select(xx=> xx.parentGroup).distinct().toArray();
-        var listNearX = [];
-        for(var i = 0; i < allParent.length;i++)
-        {
-            var combo = Enumerable.from(arryX).where(xx=> xx.parentGroup == allParent[i]).toArray();
-            if(combo.length == 1)
-            {
-                combo[0].parentGroup = allParent[i];
-                listNearX.push(combo[0]);
-                continue;
-            }
-            var multiCombo = [];
-            for(var j = 0; j<combo.length;j++)
-            {
-                var currentCombo = combo[j];
-                if(multiCombo.length < 1)
-                {
-                    currentCombo.parentGroup = allParent[i];
-                    multiCombo.push(currentCombo)
-                }
-                else
-                {
-                    for(var k=0; k<multiCombo.length;k++)
-                    {
-                        var listYPoint = Enumerable.from(multiCombo[k]).select(xx=> xx.y).orderBy().first();
-                        var currentYpoint = Enumerable.from(currentCombo).select(xx=> xx.y).orderBy().first();
-                        if(listYPoint ==currentYpoint)
-                        {
-                            currentCombo.parentGroup = allParent[i];
-                            multiCombo.push(currentCombo);
-                            break;
-                        }
-                        if( listYPoint - currentYpoint > 120 )
-                        {
-                            if(multiCombo.length == k + 1)
-                            {
-                                currentCombo.parentGroup = allParent[i];
-                                multiCombo.push(currentCombo);
-                                break;
-                            }
-                            else
-                            {
-                                continue;
-                            }
-
-                        }
-                        var listCombo = Enumerable.from(multiCombo[k]).select(xx=> xx.x).toArray();
-                        var current = Enumerable.from(currentCombo).select(xx=> xx.x).toArray();
-                        var match = getMatching2Array(listCombo,current);
-                        if(match != undefined)
-                        {
-                            var combineCombo = multiCombo[k].concat(currentCombo);
-                            multiCombo = Enumerable.from(multiCombo).where(xx=> xx != multiCombo[k]).toArray();
-                            multiCombo = Enumerable.from(multiCombo).where(xx=> xx != currentCombo).toArray();
-                            combineCombo.parentGroup = allParent[i];
-                            multiCombo.push(combineCombo);
-                            break;
-                        }
-                        else
-                        {
-                            currentCombo.parentGroup = allParent[i];
-                            multiCombo.push(currentCombo);
-                        }
-                    }   
-                }
-            }
-            if(multiCombo.length > 0)
-            {
-                multiCombo = Enumerable.from(multiCombo).distinct().toArray();
-                for(var xx= 0; xx< multiCombo.length;xx++)
-                {
-                    listNearX.push(multiCombo[xx]);
-                }
-            }
-        }
-        for(var i = 0; i< listNearX.length;i++)
-        {
-            listNearX[i].x = Enumerable.from(listNearX[i]).select(xx=> xx.x).orderBy().first();
-            listNearX[i].y = Enumerable.from(listNearX[i]).select(xx=> xx.y).orderByDescending().first();
-        }
-        listNearX = Enumerable.from(listNearX).orderByDescending(xx=> xx.y).thenBy(xx=>xx.x).toArray();
-        return listNearX;
-    }
-        
-    //getNearComboY
-    function getNearComboY(arryY)
-    {
-        //GetNearCombo
-        var allParent = Enumerable.from(arryY).select(xx=> xx.parentGroup).distinct().toArray();
-        var listNearY = [];
-        for(var i = 0; i < allParent.length;i++)
-        {
-            var combo = Enumerable.from(arryY).where(xx=> xx.parentGroup == allParent[i]).toArray();
-            if(combo.length == 1)
-            {
-                combo[0].parentGroup = allParent[i];
-                listNearY.push(combo[0]);
-                continue;
-            }
-            var multiCombo = [];
-            for(var j = 0; j<combo.length;j++)
-            {
-                var currentCombo = combo[j];
-                if(multiCombo.length < 1)
-                {
-                    currentCombo.parentGroup = allParent[i];
-                    multiCombo.push(currentCombo)
-                }
-                else
-                {
-                    for(var k=0; k<multiCombo.length;k++)
-                    {
-                        var listXpoint = Enumerable.from(multiCombo[k]).select(xx=> xx.x).orderByDescending().first();
-                        var currentXpoint = Enumerable.from(currentCombo).select(xx=> xx.x).orderBy().first();
-                        if(listXpoint ==currentXpoint)
-                        {
-                            currentCombo.parentGroup = allParent[i];
-                            multiCombo.push(currentCombo);
-                            break;
-                        }
-                        if( currentXpoint - listXpoint  > 120 )
-                        {
-                            if(multiCombo.length == k + 1)
-                            {
-                                currentCombo.parentGroup = allParent[i];
-                                multiCombo.push(currentCombo);
-                                break;
-                            }
-                            else
-                            {
-                                continue;
-                            }
-
-                        }
-                        var listCombo = Enumerable.from(multiCombo[k]).select(xx=> xx.y).toArray();
-                        var current = Enumerable.from(currentCombo).select(xx=> xx.y).toArray();
-                        var match = getMatching2Array(listCombo,current);
-                        if(match != undefined)
-                        {
-                            var combineCombo = multiCombo[k].concat(currentCombo);
-                            multiCombo = Enumerable.from(multiCombo).where(xx=> xx != multiCombo[k]).toArray();
-                            multiCombo = Enumerable.from(multiCombo).where(xx=> xx != currentCombo).toArray();
-                            combineCombo.parentGroup = allParent[i];
-                            multiCombo.push(combineCombo);
-                            break;
-                        }
-                        else
-                        {
-                            currentCombo.parentGroup = allParent[i];
-                            multiCombo.push(currentCombo);
-                        }
-                    }   
-                }
-            }
-            if(multiCombo.length > 0)
-            {
-                multiCombo = Enumerable.from(multiCombo).distinct().toArray();
-                for(var xx= 0; xx< multiCombo.length;xx++)
-                {
-                    listNearY.push(multiCombo[xx]);
-                }
-            }
-        }
-        for(var i = 0; i< listNearY.length;i++)
-        {
-            listNearY[i].x = Enumerable.from(listNearY[i]).select(xx=> xx.x).orderBy().first();
-            listNearY[i].y = Enumerable.from(listNearY[i]).select(xx=> xx.y).orderByDescending().first();
-        }
-        listNearY = Enumerable.from(listNearY).orderByDescending(xx=> xx.y).thenBy(xx=>xx.x).toArray();
-        return listNearY;
-    }
-    
-    //getLinkCombo
-    function getLinkCombo(arryX,arryY)
-    {
-        //Get Link Combo
-        var ListJoinXYCombo = arryX.concat(arryY);
-        for(var i = 0; i< ListJoinXYCombo.length;i++)
-        {
-            ListJoinXYCombo[i].x = Enumerable.from(ListJoinXYCombo[i]).select(xx=> xx.x).orderBy().first();
-            ListJoinXYCombo[i].y = Enumerable.from(ListJoinXYCombo[i]).select(xx=> xx.y).orderByDescending().first();
-        }
-        ListJoinXYCombo = Enumerable.from(ListJoinXYCombo).orderByDescending(xx=> xx.y).thenBy(xx=>xx.x).toArray();
-        var allParent = Enumerable.from(ListJoinXYCombo).select(xx=> xx.parentGroup).distinct().toArray();
-        var comboList = [];
-        for(var i = 0; i < allParent.length;i++)
-        {
-            var currentList = Enumerable.from(ListJoinXYCombo).where(xx=> xx.parentGroup == allParent[i]).toArray();
-            var multiCombo = [];
-            for(var j=0;j < currentList.length;j++)
-            {
-                var currentCombo = currentList[j];
-                if(multiCombo.length == 0)
-                {
-                    currentCombo.parentGroup = allParent[i];
-                    multiCombo.push(currentCombo)
-                }
-                else
-                {
-                    for(var k = 0; k<multiCombo.length;k++ )
-                    {
-                        var ListId = Enumerable.from(multiCombo[k]).select(xx=> xx.Id).distinct().toArray();
-                        var currentId= Enumerable.from(currentCombo).select(xx=> xx.Id).distinct().toArray();
-                        var ret = getMatching2Array(ListId,currentId);
-                        if(ret != undefined)
-                        {
-                            var combineCombo = multiCombo[k].concat(currentCombo);
-                            multiCombo = Enumerable.from(multiCombo).where(xx=> xx != multiCombo[k]).toArray();
-                            multiCombo = Enumerable.from(multiCombo).where(xx=> xx != currentCombo).toArray();
-                            combineCombo.parentGroup = allParent[i];
-                            multiCombo.push(combineCombo);
-                            break;
-                        }
-                        else
-                        {
-                            currentCombo.parentGroup = allParent[i];
-                            multiCombo.push(currentCombo);
-                            break;
-                        }
-                    }
-                }
-            }
-            if(multiCombo.length > 0)
-            {
-                multiCombo = Enumerable.from(multiCombo).distinct().toArray();
-                for(var xx= 0; xx< multiCombo.length;xx++)
-                {
-                    comboList.push(multiCombo[xx]);
-                }
-            }
-        }
-        
-        var allParent = Enumerable.from(comboList).select(xx=> xx.parentGroup).distinct().toArray(); 
-        for(var z = 0; z < mapY;z++)
-        {
-            for(var i = 0; i < allParent.length;i++)
-            {
-                var currentList = Enumerable.from(comboList).where(xx=> xx.parentGroup == allParent[i]).toArray();
-                var loop = currentList.length;
-                for(var j=0;j <loop ;j++)
-                {
-                    var next = j + 1;
-                    if(next == loop)
-                    {
-                        next = j;
-                    }
-                    var ListId = Enumerable.from(currentList[j]).select(xx=> xx.Id).distinct().toArray();
-                    var currentId= Enumerable.from(currentList[next]).select(xx=> xx.Id).distinct().toArray();
-                    var ret = getMatching2Array(ListId,currentId);
-                    if(ret != undefined && next!= j)
-                    {
-                        var combineCombo = currentList[j].concat(currentList[next]);
-                        comboList = Enumerable.from(comboList).where(xx=> xx != currentList[j]).toArray();
-                        comboList = Enumerable.from(comboList).where(xx=> xx != currentList[next]).toArray();
-                        combineCombo.parentGroup = allParent[i];
-                        comboList.push(combineCombo);
-                        break;
-                    }
-            }
-        }
-        for(var i = 0; i< comboList.length;i++)
-        {
-            comboList[i].x = Enumerable.from(comboList[i]).select(xx=> xx.x).orderBy().first();
-            comboList[i].y = Enumerable.from(comboList[i]).select(xx=> xx.y).orderByDescending().first();
-        }
-        comboList = Enumerable.from(comboList).orderByDescending(xx=> xx.y).thenBy(xx=>xx.x).toArray();
-        return comboList;
-        }
-    }
-    //ResetPosition
-    function ResetPosition(arry)
-    {
-        var objList = arry;
-        var listX = Enumerable.from(arry).select(xx=>xx.x).distinct().orderBy().toArray();
-        for(var i =0;i< listX.length; i++)
-        {
-            var list = Enumerable.from(arry).where(xx=>xx.x == listX[i]).toArray();
-            list = Enumerable.from(list).orderByDescending(xx=>xx.y).toArray();
-            if(list.length == mapY) continue;
-            for(var k = 0; k < list.length;k++)
-            {
-                for(var j =0;j<mapY;j++)
-                {
-                    var pointY = (((mapY-1) - j) * DropSize) + (DropSize/2);
-                    
-                    var minHeight = Enumerable.from(list).select(xx => xx.y).distinct().orderBy().first(); 
-                    var minHeight_2 = 999;
-                    if(Enumerable.from(list).count(xx => xx.moveTarget != undefined)> 0)
-                    {
-                        minHeight_2 = Enumerable.from(list).where(xx => xx.moveTarget != undefined).select(xx => xx.moveTarget).orderBy().first();
-                    }
-                    minHeight = (minHeight > minHeight_2)? minHeight_2:minHeight;
-                    
-                    if(minHeight > pointY) break;
-                    if(list[k].y == pointY) break;
-                    
-                    if(Enumerable.from(list).count(xx => xx.y == pointY && xx.moveTarget == undefined ) > 0) continue;
-                    if(Enumerable.from(list).count(xx => xx.moveTarget == pointY) > 0) continue;
-                    
-                    if(list[k].moveTarget == pointY) break;
-                    
-                    list[k].moveTarget = pointY;
-                    break;
-                }
-            }
-        }
-    }
-     //removeDrop   
+    //removeDrop   
     function removeDrop()
     {
         loopCount++;
-        allCombo = GetCombo();
+        allCombo = comm.GetCombo(allDrops);
         //Move with no combo
-        if(flgStartMoving == true && allCombo.length == 0 && allDrops.length == (mapX*mapY) && loopCount==1)
+        if(flgBlockMoving == true && allCombo.length == 0 && allDrops.length == (mapX*mapY) && loopCount==1)
         {
             handledDamage();
             tweenHp(teamHpCover);
@@ -1297,10 +737,10 @@
             }
             else
             {
-                tEnemyHp = enemyHp.width
+                tEnemyHp = enemyHp.width * 1.35;
             }
-            store.set('user', { enemyHp:tEnemyHp, teamHp : teamHp.width});
-            flgStartMoving = false;
+            storeData(tEnemyHp,teamHp.width);
+            flgBlockMoving = false;
             
             var life = Math.floor(lifePoint * (teamHp.width / hpBoss));
             viewHp.text = life + '/' + lifePoint;
@@ -1340,11 +780,16 @@
             allCombo = [];            
         }
               
-        if(allCombo.length == 0 && containText.children.length > 0  && allDrops.length == (mapX*mapY)  )
+        if((comm.GetCombo(allDrops).length == 0) && allCombo.length == 0 && containText.children.length > 0  && allDrops.length == (mapX*mapY)  )
         {
             containText.children = Enumerable.from(containText.children).orderBy(xx=> xx.Id).toArray();
             handlePowerUp();
-            containText.removeChildren();
+            containText.children.forEach(textDisappear);
+            var cntElement = Enumerable.from(containText.children).count(xx=> xx.width == 150);
+            if(cntElement == containText.children.length)
+            {
+            	containText.removeChildren();
+            }
             if(containText.children.length == 0 && countComboForText <= maxCombo)
             {
                 
@@ -1359,15 +804,13 @@
                 }
                 else
                 {
-                    tEnemyHp = enemyHp.width
+                    tEnemyHp = enemyHp.width*1.35;
                 }
-                
-				store.set('user', { enemyHp:tEnemyHp, teamHp : teamHp.width});
-                
+                storeData(tEnemyHp,teamHp.width);
                 var life = Math.floor(lifePoint * (teamHp.width / hpBoss));
                 viewHp.text = life + '/' + lifePoint;
             }
-            flgStartMoving = false;
+            flgBlockMoving = false;
             return;
                
         }  
@@ -1376,7 +819,7 @@
         { 
             if( Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined)== 0)
             {
-                ResetPosition(allDrops);
+                comm.ResetPosition(allDrops);
             }
             if( Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined)> 0)
             {
@@ -1401,10 +844,19 @@
         if(Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined)== 0 && allDrops.length <  (mapX*mapY))
         {
             var flg = SetDrop();
-            allCombo = GetCombo();
+            allCombo =comm.GetCombo(allDrops);
         }
     }
-    //tgg
+    
+    //textDisappear
+    function textDisappear(element, index, array)
+    {
+    	sprite = element;
+        createjs.Tween.get(sprite)
+        .to({ width : 150 ,height : 97 }, 60, createjs.Ease.getPowInOut(4))
+    }
+    
+    //Egg
     function moveEgg(sprite)
     {
         
@@ -1420,7 +872,7 @@
         let orgWidth = spriteText.width;
         let orgHeight = spriteText.height;
         createjs.Tween.get(spriteText)
-        .to({ width : 150 ,height : 97 }, 500, createjs.Ease.getPowInOut(4))
+        .to({ width : 150 ,height : 97 }, 100, createjs.Ease.getPowInOut(4))
         .to({ width : orgWidth ,height : orgHeight }, 500, createjs.Ease.getPowInOut(2))
     }
     //hp
@@ -1444,7 +896,7 @@
     function handleLoadComplete(event)
     {
        audio = createjs.Sound.play("sound",{loop:-1});
-        audio.volume = 0.7;
+       audio.volume = 0.7;
     }
     //BGM Game Clear
     function handleLoadGameWin(event)
@@ -1492,6 +944,11 @@
     function handledDamage(event)
     {
        var damage = createjs.Sound.play('damage');
+    }
+    
+    function storeData(enemy,team)
+    {
+		store.set('user', { enemyHp:enemy ,teamHp:team });
     }
      
 	</script>
