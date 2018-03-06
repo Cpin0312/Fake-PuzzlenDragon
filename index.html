@@ -25,7 +25,6 @@
     var commPIXI = new commonPIXI(PIXI);
     var allDrops = [];
     var allCombo = []; 
-    //var app = new PIXI.Application(DropSize*mapX,DropSize*mapY + 350,{backgroundColor :  comm.GetColorCode('Black')});
     var app = new PIXI.Application(window.innerHeight * (2.5/4),window.innerHeight - 50 ,{backgroundColor :  comm.GetColorCode('Black')});
     
     document.body.appendChild(app.view);
@@ -53,11 +52,13 @@
     var containText = new PIXI.Container();
     var containAll = new PIXI.Container();
     var containTop = new PIXI.Container();
+    var containTouch = new PIXI.Container();
         
     containAll.x = 0;
     containAll.y = 350;
     containAll.addChild(containRect);
     containAll.addChild(containText);
+    containAll.addChild(containTouch);
     
     var containerAll = new PIXI.Container();
     containerAll.addChild(containAll);
@@ -115,10 +116,12 @@
         
     let maxMonsterHp;
         
-    const holdingTime = 100000;
+    const holdingTime = 15000;
     var countComboForText = 0;
     var delay_1 = 0;
+    var delay_2 = 0;
     var flgDragging = false;
+    var flgMoveTimeOut = false;
     var flgStartUp = true;
     //When Seleted drog hit with other drop, start countTime
     var flgBlockMoving = false;
@@ -244,10 +247,18 @@
         containTop.addChild(viewHp);
         //touch
         touch1 = new PIXI.Sprite(resources.touch.texture);
-        touch1.parentGroup = groupTop;
+        touch1.parentGroup = groupDrag;
         touch2 = new PIXI.Sprite(resources.touch1.texture);
-        touch2.parentGroup = groupTop;
-        
+        touch2.parentGroup = groupDrag;
+        fingerLife = new PIXI.Sprite(resources.fingerLife.texture);
+        fingerLife.parentGroup = groupDrag;
+        fingerLife.alpha = 0;
+        showTouch = touch1;
+        showTouch.alpha = 0;
+        fingerLife.x =  showTouch.x + 3 ;
+        fingerLife.y =  showTouch.y + 35 ;
+        containTouch.addChild(showTouch);
+        containTouch.addChild(fingerLife);
 
         //Game Over scene
         gameOver = new PIXI.Sprite(resources.gameOver.texture);
@@ -405,36 +416,53 @@
     {
         requestAnimationFrame(gameLoop);
         //Testing
-//        if(startTime != undefined)
-//        {
-//            if(timeNow == undefined)  timeNow = new Date();
-//            else
-//            {
-//                if(timeNow - startTime >holdingTime - 3000)
-//                {
-//                   if(showTouch == undefined) showTouch = touch1;
-//                   if(showTouch == touch1) showTouch = touch2;
-//                   else{showTouch = touch2;}
-//                   containTop.addChild(showTouch);
-//                }
-//                if(timeNow - startTime >holdingTime )
-//                {
-//                    this.scale.x /= 1.1;
-//                    this.scale.y /= 1.1;
-//                    this.parentGroup = this.org_parentGroup;
-//                    this.x = this.org_position_x;
-//                    this.y = this.org_position_y;
-//                    this.flgDragging = false;
-//                    flgDragging = false  ;
-//                    flgMoveUptoDown = true;
-//                    loopCount = 0;
-//                    containTop.removeChild(showTouch);
-//                    showTouch = undefined;
-//                    startTime = undefined;
-//                    timeNow = undefined
-//                }
-//            }
-//        }
+        if(startTime != undefined)
+        {
+            timeNow = new Date();
+            if(timeNow - startTime >holdingTime - 5000)
+            {
+                var movingDrop = Enumerable.from(allDrops).where(xx=>xx.flgDragging == true).firstOrDefault();
+                if(movingDrop != undefined)
+                {
+                    fingerLife.alpha = 1;
+                    showTouch.alpha = 1;
+                    containTouch.x = movingDrop.x - movingDrop.width/2;
+                    containTouch.y = movingDrop.y - movingDrop.width/2;
+                    fingerLife.width =  (holdingTime- (timeNow - startTime)) / 5000 * (fingerLife.texture.baseTexture.width) ;
+                    if(delay_2 % 6 == 0)
+                    {
+                        if((touch1.alpha == 0 && touch2.alpha == 0 )|| (touch1.alpha == 0 && touch2.alpha == 1 ) )
+                        {
+                            showTouch = touch1;                   
+                            showTouch.alpha = 1;
+                        }
+                        else(touch1.alpha == 1 && touch2.alpha == 0)
+                        {
+                            showTouch = touch2;               
+                            showTouch.alpha = 1;            
+                        }
+                    }
+                    delay_2 ++;
+                }
+            }
+            if(timeNow - startTime >holdingTime )
+            {
+                fingerLife.alpha = 0;
+                showTouch.alpha = 0;
+                touch1.alpha = 0;
+                touch2.alpha = 0;
+                flgMoveTimeOut = true;
+                var movingDrop = Enumerable.from(allDrops).where(xx=>xx.flgDragging == true).firstOrDefault();
+                if(movingDrop != undefined)
+                {
+                    moveCancel(movingDrop);
+                    startTime = undefined;
+                    timeNow = undefined;
+                    var texture = new PIXI.Texture(fingerLife.texture.baseTexture);
+                    fingerLife.width = new PIXI.Sprite(texture);
+                }
+            }
+        }
         
         //Only First time
         if(flgStartUp == true)
@@ -573,6 +601,7 @@
         // if win the game
         if(gameWinFlg == true)
         {
+           audio.paused = true;
             //monster been transparent
             if(enemy.alpha !=0)
             {
@@ -638,8 +667,8 @@
             flgDragging = true;
             this.flgDragging = true;
             this.data = event.data;
-            this.scale.x *= 1.1;
-            this.scale.y *= 1.1;
+            this.scale.x *= 1.3;
+            this.scale.y *= 1.3;
             this.org_parentGroup = this.parentGroup;
             this.parentGroup = groupDrag;
             this.org_position_x = this.x;
@@ -654,27 +683,20 @@
     {
         if(this.flgDragging == true)
         {   
-            this.scale.x /= 1.1;
-            this.scale.y /= 1.1;
-            this.parentGroup = this.org_parentGroup;
-            this.x = this.org_position_x;
-            this.y = this.org_position_y;
-            this.flgDragging = false;
-            flgDragging = false  ;
-            flgMoveUptoDown = true;
-            loopCount = 0;
-            containTop.removeChild(showTouch);
-            showTouch = undefined;
-            startTime = undefined;
-            timeNow = undefined
+            moveCancel(this);
         }
     }
     //Mouse Move
     function dragMove(e)
     {
-       if(this.flgDragging == true)
+        if(flgMoveTimeOut == true )
         {
-            timeNow = new Date();
+            e.stopPropagation();
+            moveCancel(this);
+        }
+        if(this.flgDragging == true)
+        {
+//            timeNow = new Date();
             var mousePst = this.data.getLocalPosition(this.parent);
             this.position.set(mousePst.x,mousePst.y);
             var result = comm.hitDrop(this,allDrops);
@@ -698,23 +720,6 @@
                 this.org_position_y = result.org_position_y;
                 flgBlockMoving = true;
             }
-        }
-        if(startTime != undefined && timeNow - startTime >holdingTime )
-        {
-            e.stopPropagation();
-            this.scale.x /= 1.1;
-            this.scale.y /= 1.1;
-            this.parentGroup = this.org_parentGroup;
-            this.x = this.org_position_x;
-            this.y = this.org_position_y;
-            this.flgDragging = false;
-            flgDragging = false  ;
-            flgMoveUptoDown = true;
-            loopCount = 0;
-            containTop.removeChild(showTouch);
-            showTouch = undefined;
-            startTime = undefined;
-            timeNow = undefined
         }
     }
     
@@ -783,11 +788,11 @@
         if((comm.GetCombo(allDrops).length == 0) && allCombo.length == 0 && containText.children.length > 0  && allDrops.length == (mapX*mapY)  )
         {
             containText.children = Enumerable.from(containText.children).orderBy(xx=> xx.Id).toArray();
-            handlePowerUp();
             containText.children.forEach(textDisappear);
             var cntElement = Enumerable.from(containText.children).count(xx=> xx.width == 150);
             if(cntElement == containText.children.length)
-            {
+            {            
+                handlePowerUp();
             	containText.removeChildren();
             }
             if(containText.children.length == 0 && countComboForText <= maxCombo)
@@ -838,7 +843,32 @@
             }
         }
     }
-    
+    //cancel move event
+    function moveCancel(sprite)
+    {
+        //if already reset
+        if(sprite.parentGroup != groupDrag)
+        {
+            return;
+        }
+        sprite.scale.x /= 1.3;
+        sprite.scale.y /= 1.3;
+        sprite.parentGroup = sprite.org_parentGroup;
+        sprite.x = sprite.org_position_x;
+        sprite.y = sprite.org_position_y;
+        sprite.flgDragging = false;
+        flgDragging = false  ;
+        flgMoveUptoDown = true;
+        loopCount = 0;
+        startTime = undefined;
+        timeNow = undefined
+        flgMoveTimeOut = false;
+        fingerLife.alpha = 0;
+        showTouch.alpha = 0;
+        touch1.alpha = 0;
+        touch2.alpha = 0;
+    }
+        
     function handleComplete()
     {
         if(Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined)== 0 && allDrops.length <  (mapX*mapY))
