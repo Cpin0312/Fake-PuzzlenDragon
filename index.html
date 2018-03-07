@@ -20,6 +20,7 @@
     var mapY = 5;    
     var maxCombo = 9;
     const DropSize = 80;
+    const dropType = 3;
     var totalDrops = mapX * mapY;
     var comm = new commonMethod();
     var commPIXI = new commonPIXI(PIXI);
@@ -69,14 +70,14 @@
     //app.stage.addChild(containTop);
         
     createjs.Sound.alternateExtensions = ["mp3"];
+    //Play BackGroup BGM
+    createjs.Sound.addEventListener("fileload", handleLoadComplete);
     createjs.Sound.registerSound({src:"src/sounds/puzzleDragonbmg.mp3", id:"sound"});
     createjs.Sound.registerSound({src:"src/sounds/drogMoveShort.mp3", id:"soundMove"});
     createjs.Sound.registerSound({src:"src/sounds/powerUp.mp3", id:"powerUp"});
     createjs.Sound.registerSound({src:"src/sounds/gameOver.mp3", id:"gameOverSound"});
     createjs.Sound.registerSound({src:"src/sounds/gameWin.mp3", id:"gameWin"});
     createjs.Sound.registerSound({src:"src/sounds/damage.mp3", id:"damage"});
-    //Play BackGroup BGM
-    createjs.Sound.on("fileload", this.handleLoadComplete, this);
         
     var dropFire ;
     var dropEarth ;
@@ -338,7 +339,7 @@
             var position_x = ((i%mapX) * DropSize) + (DropSize/2);
             var position_y = ((Math.floor(i/mapX)) * DropSize) + (DropSize/2);
             //get Random element
-            var randomCnt = comm.GetRandomInt(1,3);
+            var randomCnt = comm.GetRandomInt(1,dropType);
             var Drop;
             
             // Reset Id if drop exist
@@ -699,7 +700,7 @@
 //            timeNow = new Date();
             var mousePst = this.data.getLocalPosition(this.parent);
             this.position.set(mousePst.x,mousePst.y);
-            var result = comm.hitDrop(this,allDrops);
+            var result = comm.hitDrop(this,allDrops,DropSize);
             if( result != undefined)
             {
                 if(startTime == undefined)  startTime = new Date();
@@ -763,7 +764,6 @@
             }
             if(containText.children.length == 0 && countComboForText <= maxCombo)
             {
-                
                 handledDamage();
                 tweenHp(teamHpCover);
                 tweenHp(teamHp);
