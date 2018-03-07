@@ -338,7 +338,7 @@
             var position_x = ((i%mapX) * DropSize) + (DropSize/2);
             var position_y = ((Math.floor(i/mapX)) * DropSize) + (DropSize/2);
             //get Random element
-            var randomCnt = comm.GetRandomInt(1,5);
+            var randomCnt = comm.GetRandomInt(1,3);
             var Drop;
             
             // Reset Id if drop exist
@@ -751,41 +751,7 @@
             viewHp.text = life + '/' + lifePoint;
             return;
         }
-        if(allCombo.length > 0 && ( Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined) ==  0))
-        {
-            for(var i = 0; i<allCombo.length;i++ )
-            {
-                if(allCombo[i][0].alpha == 1)
-                {
-                    countComboForText += 1;
-                   handleRemove();
-                }
-                for(var j = 0;j <allCombo[i].length;j++)
-                {
-                    allCombo[i][j].alpha -= 0.04; 
-                }
-                if(allCombo[i][0].alpha > 0) return;  
-                for(var j = 0;j <allCombo[i].length;j++)
-                {
-                    containRect.removeChild(allCombo[i][j])
-                    allDrops = Enumerable.from(allDrops).where(xx=> xx !=allCombo[i][j] ).toArray();
-                    allDrops = Enumerable.from(allDrops).distinct().toArray();
-                }
-                var xList = Enumerable.from(allCombo[i]).select(xx=> xx.x).distinct().orderBy().toArray();
-                var yList = Enumerable.from(allCombo[i]).select(xx=> xx.y).distinct().orderBy().toArray();
-                var pointX =  xList[0] + ((xList[xList.length-1] - xList[0]) / 2);
-                var pointY = yList[0] + ((yList[yList.length-1] - yList[0]) / 2);
-                var txt = countComboForText + ' combos';
-                var msg = commPIXI.Setmsg(txt,pointX,pointY,24);
-                msg.parentGroup = groupText;
-                msg.Id = countComboForText;
-                containText.addChild(msg);
-                tweenText(msg);
-            }
-            allCombo = [];            
-        }
-              
-        if((comm.GetCombo(allDrops).length == 0) && allCombo.length == 0 && containText.children.length > 0  && allDrops.length == (mapX*mapY)  )
+        if(allCombo.length == 0 && containText.children.length > 0  && allDrops.length == (mapX*mapY)  )
         {
             containText.children = Enumerable.from(containText.children).orderBy(xx=> xx.Id).toArray();
             containText.children.forEach(textDisappear);
@@ -817,9 +783,40 @@
             }
             flgBlockMoving = false;
             return;
-               
         }  
-
+        if(allCombo.length > 0 && ( Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined) ==  0))
+        {
+            for(var i = 0; i<allCombo.length;i++ )
+            {
+                if(allCombo[i][0].alpha == 1)
+                {
+                   countComboForText += 1;
+                   handleRemove();
+                }
+                for(var j = 0;j <allCombo[i].length;j++)
+                {
+                    allCombo[i][j].alpha -= 0.04; 
+                }
+                if(allCombo[i][0].alpha > 0) return;  
+                for(var j = 0;j <allCombo[i].length;j++)
+                {
+                    containRect.removeChild(allCombo[i][j])
+                    allDrops = Enumerable.from(allDrops).where(xx=> xx !=allCombo[i][j] ).toArray();
+                    allDrops = Enumerable.from(allDrops).distinct().toArray();
+                }
+                var xList = Enumerable.from(allCombo[i]).select(xx=> xx.x).distinct().orderBy().toArray();
+                var yList = Enumerable.from(allCombo[i]).select(xx=> xx.y).distinct().orderBy().toArray();
+                var pointX =  xList[0] + ((xList[xList.length-1] - xList[0]) / 2);
+                var pointY = yList[0] + ((yList[yList.length-1] - yList[0]) / 2);
+                var txt = countComboForText + ' combos';
+                var msg = commPIXI.Setmsg(txt,pointX,pointY,24);
+                msg.parentGroup = groupText;
+                msg.Id = countComboForText;
+                containText.addChild(msg);
+                tweenText(msg);
+            }
+            allCombo = [];            
+        }
         if(allDrops.length <  (mapX*mapY) )
         { 
             if( Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined)== 0)
@@ -842,6 +839,7 @@
                 handleComplete();
             }
         }
+        
     }
     //cancel move event
     function moveCancel(sprite)
