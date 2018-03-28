@@ -16,6 +16,10 @@
 <body >
 	<script type = 'text/javascript'>
 	var initialData = getInitialData(initialData);
+	var DropSize = 97;
+    var mapX =6;
+    var mapY = 5;   
+    var flgRemoveAble = false; 
 	var listFlag = getFlag(listFlag);
    	var comm = new commonMethod();
    	var commPIXI = new commonPIXI(PIXI); 
@@ -45,57 +49,92 @@
     
     function gameStart()
     {
-    		requestAnimationFrame(gameStart);
+    	requestAnimationFrame(gameStart);
     	if(listFlag.StartUpFlag)
     	{
     		SetPuzzleBoard(listFlag.StartUpFlag);
     	}
+		if(flgRemoveAble == true)
+		{
+			var comboList = comm.GetCombo(arrayContainer[0].children,arrayContainer[0].children[0].height);
+			console.log(comboList.length);
+			for(var i =0; i< comboList.length;i++)
+			{
+				comboList[i].forEach(function(value){
+				createjs.Tween.get(value)
+				.to({ alpha : 0}, 1500, createjs.Ease.getPowInOut(4))
+				.call(function(){ arrayContainer[0].removeChild(value);  })});
+			}
+			flgRemoveAble = false;
+			SetPuzzleBoard();
+		}
     }
     
     function SetPuzzleBoard(StartUpFlag = false)
     {
 		try
 		{
-			//struct.dropVerticalUnits = 5; 
-			if(arrayDrops != undefined && arrayDrops.length > 0 && arrayGroup!= undefined && arrayGroup.length > 0 && arrayContainer[0].children.length != 30)
+			if(arrayDrops != undefined && arrayDrops.length > 0 && arrayGroup!= undefined && arrayGroup.length > 0 && arrayContainer[0].children.length != initialData.BoardDrops)
 			{ 
-				for(var i = 0; i< initialData.BoardDrops; i++)
+				while(true)
 				{
-					var x = Math.floor(i%initialData.dropHorizonUnits);
-					var y = Math.floor(i/initialData.dropHorizonUnits);
-					var dropElement = comm.GetRandomInt(0,4);
-					var dropTexture = Enumerable.from(arrayDrops).where(xx=> xx.GroupId ==dropElement ).first();
-					
-					var dropSprite = new PIXI.Sprite(dropTexture);
-					dropSprite.anchor.set(0.5);
-					
-					positionX = (x*(dropTexture.width))  + dropTexture.width/2;
-					positionY = (y*(dropTexture.height))  + dropTexture.height/2;
-					dropSprite.x = positionX;
-					dropSprite.y = ((y - initialData.dropVerticalUnits  ) * dropTexture.height);
-					dropSprite.destY = positionY;
-					var group = Enumerable.from(arrayGroup).where(xx=>xx.Id ==dropElement ).first();
-            		dropSprite.parentGroup = group;
-					console.log(dropSprite.x,dropSprite.y);
-					app.stage.addChild(dropSprite);
-					arrayContainer[0].addChild(dropSprite);
+					for(var i = 0; i< initialData.BoardDrops; i++)
+					{
+						if(arrayContainer[0].children.length > 0)
+						{
+							if(Enumerable.from(arrayContainer[0]).count(xx=> xx.Id == i) > 0)
+							{
+								continue;
+							}
+						}
+						var x = Math.floor(i%initialData.dropHorizonUnits);
+						var y = Math.floor(i/initialData.dropHorizonUnits);
+						var dropElement = comm.GetRandomInt(0,2);
+						var dropTexture = Enumerable.from(arrayDrops).where(xx=> xx.GroupId == dropElement ).first();
+						var dropSprite = new PIXI.Sprite(dropTexture);
+						dropSprite.anchor.set(0.5);
+						positionX = (x*(dropTexture.width))  + dropTexture.width/2;
+						positionY = (y*(dropTexture.height))  + dropTexture.height/2;
+						dropSprite.Id = i; 
+						dropSprite.x = positionX;
+						dropSprite.y = ((y - initialData.dropVerticalUnits  ) * dropTexture.height);
+						dropSprite.destY = positionY;
+						var group = Enumerable.from(arrayGroup).where(xx=>xx.Id ==dropElement ).first();
+	            		dropSprite.parentGroup = group;
+						arrayContainer[0].addChild(dropSprite);
+					}
+					if(StartUpFlag == false) break;
+					else
+					{
+						var comboList = comm.GetCombo(arrayContainer[0].children,arrayContainer[0].children[0].height);
+						if(comboList.length > 0)
+						{
+							arrayContainer[0].removeChildren();
+							continue;
+						}
+						else
+						{
+							break;
+						}
+					}
 				}
 			}
-			if(arrayContainer[0].children.length == 30)
+			if(arrayContainer[0].children.length == initialData.BoardDrops)
 			{
 				if(Enumerable.from(arrayContainer[0].children).count(xx=> xx.destY > 0 ) > 0)
 				{
 					arrayContainer[0].children.forEach(function(value){
 					createjs.Tween.get(value)
 					.to({ y : value.destY}, 700, createjs.Ease.getPowInOut(4))
-					.call(function(){value.destY = 0})});
+					.call(function(){value.destY = 0})
+					.call(function(){ if(Enumerable.from(arrayContainer[0].children).count(xx=> xx.destY > 0 ) == 0) { flgRemoveAble = true;}})
+					});
 				}
 			}
     	}
 		catch(e)
 		{
-			console.log("異常");
-			console.log(e);
+			console.log("異常 : " + e);
 		}	
     }
     
