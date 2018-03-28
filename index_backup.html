@@ -1,0 +1,197 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset = 'utf-8'>
+	<title>FakePuzzleAndDragon</title>
+</head>
+<script src = 'lib/commonMethod.js'></script>
+<script src = 'lib/commonPIXI.js'></script>
+<script src = 'lib/linq.js'></script>
+<script src = 'lib/pixi.min.js'></script>
+<script src = 'lib/pixi-layers.js'></script>
+<script src = 'lib/soundjs-0.6.2.min.js'></script>
+<script src = 'lib/tweenjs.min.js'></script>
+<script src = 'lib/Tone.min.js'></script>
+<script src = 'lib/store.legacy.min.js'></script>
+<body >
+	<script type = 'text/javascript'>
+	var initialData = getInitialData(initialData);
+	var listFlag = getFlag(listFlag);
+   	var comm = new commonMethod();
+   	var commPIXI = new commonPIXI(PIXI); 
+    var app = new PIXI.Application(
+    		  window.innerWidth,window.innerHeight,
+    		  {
+					background : comm.GetColorCode('Black')
+					//transparent : true
+    		  });
+    document.body.appendChild(app.view);
+    app.stage = new PIXI.display.Stage();
+    //Get z-layer 
+    var arrayGroup = GetGroup();
+    //Add z-layer to stage
+    setLayer(arrayGroup);
+    //Get Container
+    var arrayContainer = GetContainer();
+    //Add container to stage
+    setContainer(arrayContainer);
+    var arrayDrops = [];
+    
+    PIXI.loader
+    .add("dropJs","src/images/PuzzleDragons.json")
+    .load(startUpsetup);
+    
+    gameStart();
+    
+    function gameStart()
+    {
+    		requestAnimationFrame(gameStart);
+    	if(listFlag.StartUpFlag)
+    	{
+    		SetPuzzleBoard(listFlag.StartUpFlag);
+    	}
+    }
+    
+    function SetPuzzleBoard(StartUpFlag = false)
+    {
+		try
+		{
+			//struct.dropVerticalUnits = 5; 
+			if(arrayDrops != undefined && arrayDrops.length > 0 && arrayGroup!= undefined && arrayGroup.length > 0 && arrayContainer[0].children.length != 30)
+			{ 
+				for(var i = 0; i< initialData.BoardDrops; i++)
+				{
+					var x = Math.floor(i%initialData.dropHorizonUnits);
+					var y = Math.floor(i/initialData.dropHorizonUnits);
+					var dropElement = comm.GetRandomInt(0,4);
+					var dropTexture = Enumerable.from(arrayDrops).where(xx=> xx.GroupId ==dropElement ).first();
+					
+					var dropSprite = new PIXI.Sprite(dropTexture);
+					dropSprite.anchor.set(0.5);
+					
+					positionX = (x*(dropTexture.width))  + dropTexture.width/2;
+					positionY = (y*(dropTexture.height))  + dropTexture.height/2;
+					dropSprite.x = positionX;
+					dropSprite.y = ((y - initialData.dropVerticalUnits  ) * dropTexture.height);
+					dropSprite.destY = positionY;
+					var group = Enumerable.from(arrayGroup).where(xx=>xx.Id ==dropElement ).first();
+            		dropSprite.parentGroup = group;
+					console.log(dropSprite.x,dropSprite.y);
+					app.stage.addChild(dropSprite);
+					arrayContainer[0].addChild(dropSprite);
+				}
+			}
+			if(arrayContainer[0].children.length == 30)
+			{
+				if(Enumerable.from(arrayContainer[0].children).count(xx=> xx.destY > 0 ) > 0)
+				{
+					arrayContainer[0].children.forEach(function(value){
+					createjs.Tween.get(value)
+					.to({ y : value.destY}, 700, createjs.Ease.getPowInOut(4))
+					.call(function(){value.destY = 0})});
+				}
+			}
+    	}
+		catch(e)
+		{
+			console.log("異常");
+			console.log(e);
+		}	
+    }
+    
+    function startUpsetup(loader,resources)
+    {
+    	var dropID = resources.dropJs.textures;
+    	//Get dropSprite
+    	arrayDrops = getDropSprite(dropID);
+    }
+    
+    function getDropSprite(DropsIdList)
+    {
+    	var listDrop = [];
+    	if(DropsIdList == undefined)
+    	{
+    	 	console.log("DropsSprite取得失敗");
+    	}
+    	var nameSprite = ["fire","earth","water","light","dark"];
+    	for(var i =0; i< nameSprite.length; i++ )
+    	{
+    		var nameId = nameSprite[i] + ".png";
+    		var drop  = DropsIdList[nameId];
+    		drop.GroupId = i; 
+    		drop.name = nameSprite[i];
+    		listDrop.push(drop);
+    	}
+    	return listDrop;
+    }
+    
+    function GetGroup()
+    {
+        var arry = [];
+    	for(var i = 0; i< 10; i++)
+    	{
+    		var group = new PIXI.display.Group(i,false);
+    		group.Name = "";
+    		group.TypeName = "Group";
+    		group.Id = i;
+    		arry.push(group);
+    	}
+    	return arry;
+    }
+    
+    function setLayer(arryGroup)
+    {
+    	if(arryGroup == undefined || arryGroup.length < 1)
+    	{
+    		console.log("Layer処理異常");
+    	}
+    	arryGroup.forEach(function(value){ app.stage.addChild(new PIXI.display.Layer(value));});
+    }
+    
+    function GetContainer()
+    {
+    	var arryContainer = [];
+    	for(var i = 0; i< 10; i++)
+    	{
+    		var container = new PIXI.Container();
+    		container.ID = i;
+    		container.TypeName = "Container";
+    		container.Name = "";
+    		arryContainer.push(container);
+    	}
+    	arryContainer.forEach(function(value){ app.stage.addChild(value);});
+    	return arryContainer;
+    }
+    
+    function setContainer(arrContainer)
+    {
+    	if(arrContainer == undefined || arrContainer.length < 1 )
+    	{
+    		console.log("Container処理異常");
+    	}
+    	arrContainer.forEach(function(value){ app.stage.addChild(value);});
+    }
+    
+    function getFlag(obj)
+    {
+    	obj = new Object();
+    	obj.StartUpFlag = true;
+    	obj.Dragging = false;
+    	obj.Moving = false;
+    	return obj;
+    }
+    
+    function getInitialData(obj)
+    {
+    	struct = new Object();
+		struct.dropPositionX = 0; 
+		struct.dropPositionY = 200;
+		struct.dropHorizonUnits = 6; 
+		struct.dropVerticalUnits = 5; 
+		struct.BoardDrops = struct.dropHorizonUnits * struct.dropVerticalUnits;
+		return struct;
+    }
+    
+	</script>
+</body>
+</html>
