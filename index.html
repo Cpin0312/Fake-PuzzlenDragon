@@ -15,970 +15,339 @@
 <script src = 'lib/store.legacy.min.js'></script>
 <body >
 	<script type = 'text/javascript'>
-    //initial Data
+	var testFlg = false;
+	var initialData = getInitialData(initialData);
+	var DropSize = 97;
     var mapX =6;
-    var mapY = 5;    
-    var maxCombo = 9;
-    const DropSize = 80;
-    const dropType = 3;
-    var totalDrops = mapX * mapY;
-    var comm = new commonMethod();
-    var commPIXI = new commonPIXI(PIXI);
-    var allDrops = [];
-    var allCombo = []; 
-    var app = new PIXI.Application(window.innerHeight * (2.5/4),window.innerHeight - 50 ,{backgroundColor :  comm.GetColorCode('Black')});
-    
+    var mapY = 5;   
+	var listFlag = getFlag(listFlag);
+   	var comm = new commonMethod();
+   	var commPIXI = new commonPIXI(PIXI); 
+    var app = new PIXI.Application(
+    		  window.innerWidth,window.innerHeight,
+    		  {
+					background : comm.GetColorCode('Black')
+					//transparent : true
+    		  });
     document.body.appendChild(app.view);
-        
-    var groupFire = new PIXI.display.Group(1,false);
-    var groupEarth = new PIXI.display.Group(2,false);
-    var groupWater = new PIXI.display.Group(3,false);
-    var groupLight = new PIXI.display.Group(4,false);
-    var groupDark = new PIXI.display.Group(5,false);
-    var groupDrag = new PIXI.display.Group(7,false);
-    var groupText = new PIXI.display.Group(9,false);
-    var groupTop = new PIXI.display.Group(10,false);
-        
     app.stage = new PIXI.display.Stage();
-    app.stage.addChild(new PIXI.display.Layer(groupFire));
-    app.stage.addChild(new PIXI.display.Layer(groupEarth));
-    app.stage.addChild(new PIXI.display.Layer(groupWater));
-    app.stage.addChild(new PIXI.display.Layer(groupLight));
-    app.stage.addChild(new PIXI.display.Layer(groupDark));
-    app.stage.addChild(new PIXI.display.Layer(groupDrag));
-    app.stage.addChild(new PIXI.display.Layer(groupText));
-    app.stage.addChild(new PIXI.display.Layer(groupTop));
-    
-    var containRect = new PIXI.Container();
-    var containText = new PIXI.Container();
-    var containAll = new PIXI.Container();
-    var containTop = new PIXI.Container();
-    var containTouch = new PIXI.Container();
-        
-    containAll.x = 0;
-    containAll.y = 350;
-    containAll.addChild(containRect);
-    containAll.addChild(containText);
-    containAll.addChild(containTouch);
-    
-    var containerAll = new PIXI.Container();
-    containerAll.addChild(containAll);
-    containerAll.addChild(containTop);
-    app.stage.addChild(containerAll);
-    
-    //app.stage.addChild(containAll);
-    //app.stage.addChild(containTop);
-        
-    createjs.Sound.alternateExtensions = ["mp3"];
-    //Play BackGroup BGM
-    createjs.Sound.addEventListener("fileload", handleLoadComplete);
-    createjs.Sound.registerSound({src:"src/sounds/puzzleDragonbmg.mp3", id:"sound"});
-    createjs.Sound.registerSound({src:"src/sounds/drogMoveShort.mp3", id:"soundMove"});
-    createjs.Sound.registerSound({src:"src/sounds/powerUp.mp3", id:"powerUp"});
-    createjs.Sound.registerSound({src:"src/sounds/gameOver.mp3", id:"gameOverSound"});
-    createjs.Sound.registerSound({src:"src/sounds/gameWin.mp3", id:"gameWin"});
-    createjs.Sound.registerSound({src:"src/sounds/damage.mp3", id:"damage"});
-        
-    var dropFire ;
-    var dropEarth ;
-    var dropWater ;
-    var dropLight ;
-    var dropDark ;
-    var audio;
-    var HpMonster;
-    var audioMoving ;
-    
-    //startMoveTime
-    let startTime = undefined;
-    //MovingTime
-    let timeNow = undefined;
-    let hpBoss ;
-    const lifePoint = 23456;
-    var loopCount = 0;
-
-    //image Name
-    var topbackGroup;
-    var enemy;
-    var teamMonster;
-    var teamHp;
-    var teamHpCover;
-    var enemyHp;
-    var enemyHpCover;
-    var combo9;
-    var gameOver;
-    var clearStage;
-    var egg ;
-    var enemyHpTexture;
-    var dataSave;
-    var viewHp;
-    var touch1;
-    var touch2;
-    var showTouch;
-        
-    let maxMonsterHp;
-        
-    const holdingTime = 15000;
-    var countComboForText = 0;
-    var delay_1 = 0;
-    var delay_2 = 0;
-    var flgDragging = false;
-    var flgMoveTimeOut = false;
-    var flgStartUp = true;
-    //When Seleted drog hit with other drop, start countTime
-    var flgBlockMoving = false;
-    //Start moving for new drops
-    var flgMoveUptoDown = false;
-    let gameOverFlg = false; 
-    let gameWinFlg = false; 
-    //set Tone
-    var toneArray = ['E4','F4','F#4','G4','G#4','A4','A#4','B4',
-                     'C5','C#5','D5','D#5','E5','F5','F#5','G5','G#5','A5','A#5','B5',
-                     'C6','C#6','D6','D#6','E6','F6','F#6','G6','G#6','A6','A#6','B6',
-                     'C7','C#7','D7','D#7','E7','F7','F#7','G7','G#7','A7','A#7','B7',
-                     'C8','C#8','D8','D#8','E8','F8','F#8','G8','G#8','A8','A#8','B8']
-    
+    //Get z-layer 
+    var arrayGroup = GetGroup();
+    //Add z-layer to stage
+    setLayer(arrayGroup);
+    //Get Container
+    var arrayContainer = GetContainer();
+    //Add container to stage
+    setContainer(arrayContainer);
+    var arrayDrops = [];
     
     PIXI.loader
-        .add('src/images/PuzzleDragons.json')
-        .add('src/images/background.json')
-        .add('topbackgroup','src/images/topbackgroup.png')
-        .add('enemy','src/images/monster.png')
-        .add('teamMonster','src/images/mon_1.png')
-        .add('teamHpCover','src/images/HpBar.png')
-        .add('teamHp','src/images/HpBarLife.png')
-        .add('enemyHp','src/images/hpBarMonster.png')
-        .add('enemyHpCover','src/images/HpMonster.png')
-        .add('combo9','src/images/9Combo.png')
-        .add('gameOver','src/images/gameOver.png')
-        .add('clear','src/images/clear.png')
-        .add('egg','src/images/egg.png')
-        
-        .add('touch','src/images/touch.png')
-        .add('touch1','src/images/touch1.png')
-        .add('fingerLife','src/images/fingerLife.png')
-        .load(setup);
+    .add("dropJs","src/images/PuzzleDragons.json")
+    .load(startUpsetup);
     
-    //StartUp Setting
-    function setup(loader,resources)
-    {	
-		dataSave = store.get('user')
-        //set Battle BackGroup
-        topbackGroup = new PIXI.Sprite(resources.topbackgroup.texture);
-        topbackGroup.width = DropSize*mapX;
-        topbackGroup.height = 325;
-        topbackGroup.parentGroup = groupTop;
-        containTop.addChild(topbackGroup);
-        //set Monster
-        enemy = new PIXI.Sprite(resources.enemy.texture);
-        enemy.scale.x /= 2;
-        enemy.scale.y /= 2;
-        enemy.x = 90;
-        enemy.y = 20;
-        enemy.parentGroup = groupTop;
-        containTop.addChild(enemy);
-        //set Fighter Member
-        teamMonster = new PIXI.Sprite(resources.teamMonster.texture);
-        teamMonster.scale.x /= 1.3;
-        teamMonster.scale.y /= 1.3;
-        teamMonster.x = 10;
-        teamMonster.y = 240;
-        teamMonster.parentGroup = groupTop;
-        containTop.addChild(teamMonster);
-        //set Hp life(Discreace able)
-	    teamHp = new PIXI.Sprite(resources.teamHp.texture);
-        teamHp.x = 35;
-        teamHp.y = 322;
-        teamHp.parentGroup = groupTop;
-        //load saveData
-        if(dataSave != undefined && dataSave.teamHp != undefined)
-        {
-	        teamHp.width = dataSave.teamHp;
-        }
-        else
-        {
-	        teamHp.width = 430;
-        }
-        hpBoss = 430;
-        containTop.addChild(teamHp);
-        //set Hp life(Cover Only)
-        teamHpCover = new PIXI.Sprite(resources.teamHpCover.texture);
-        teamHpCover.scale.x /= 1.35;
-        teamHpCover.scale.y /= 1.3;
-        teamHpCover.x = 10;
-        teamHpCover.y = 322;
-        teamHpCover.parentGroup = groupTop;
-        containTop.addChild(teamHpCover);
-        //set Monster hpBar(Discreace able)
-        enemyHpTexture = resources.enemyHp.texture;
-        //load saveData
-        if(dataSave != undefined && dataSave.enemyHp != undefined)
-        {
-        	var tempTexture = new PIXI.Texture(enemyHpTexture.baseTexture,new PIXI.Rectangle(0,0,dataSave.enemyHp,enemyHpTexture.baseTexture.height))
-        	enemyHp = new PIXI.Sprite(tempTexture);
-        }
-        else
-        {
-        	enemyHp = new PIXI.Sprite(enemyHpTexture);
-        }
-        enemyHp.scale.x /= 1.35;
-        enemyHp.scale.y /= 1.3;
-        maxMonsterHp = enemyHpTexture.baseTexture.width/ 1.35;
-        enemyHp.x = 90;
-        enemyHp.y = 225;
-        enemyHp.parentGroup = groupTop;
-        containTop.addChild(enemyHp);
-        //set Monster hpBar(Not Discreace able)
-        enemyHpCover = new PIXI.Sprite(resources.enemyHpCover.texture);
-        enemyHpCover.scale.x /= 1.35;
-        enemyHpCover.scale.y /= 1.3;
-        enemyHpCover.x = 60;
-        enemyHpCover.y = 213;
-        enemyHpCover.parentGroup = groupTop;
-        containTop.addChild(enemyHpCover);
-        //Boss Skill Icon
-        combo9 = new PIXI.Sprite(resources.combo9.texture);
-        combo9.x = 100;
-        combo9.y = 50;
-        combo9.parentGroup = groupTop;
-        containTop.addChild(combo9);
-        //viewHp
-        var life = Math.floor(lifePoint * (teamHp.width/ hpBoss));
-        viewHp = commPIXI.SetHp(life + '/' + lifePoint,teamHpCover.width * (13/15),teamHpCover.y + 20);
-        viewHp.parentGroup = groupTop;
-        containTop.addChild(viewHp);
-        //touch
-        touch1 = new PIXI.Sprite(resources.touch.texture);
-        touch1.parentGroup = groupDrag;
-        touch2 = new PIXI.Sprite(resources.touch1.texture);
-        touch2.parentGroup = groupDrag;
-        fingerLife = new PIXI.Sprite(resources.fingerLife.texture);
-        fingerLife.parentGroup = groupDrag;
-        fingerLife.alpha = 0;
-        showTouch = touch1;
-        showTouch.alpha = 0;
-        fingerLife.x =  showTouch.x + 3 ;
-        fingerLife.y =  showTouch.y + 35 ;
-        containTouch.addChild(showTouch);
-        containTouch.addChild(fingerLife);
-
-        //Game Over scene
-        gameOver = new PIXI.Sprite(resources.gameOver.texture);
-        gameOver.scale.x *= 1.5;
-        gameOver.scale.y *= 1.5;
-        //Game Clear scene
-        clearStage = new PIXI.Sprite(resources.clear.texture);
-        //Egg scene
-        egg = new PIXI.Sprite(resources.egg.texture);
-        egg.anchor.set(0.5);
-        //Drop Backgroup
-        puzzleBackDround_Id = PIXI.loader.resources['src/images/background.json'].textures;
-        //Game Scene Setting
-        //BackGroup(Tiling)
-        background = new PIXI.Texture(puzzleBackDround_Id['backGround.png']);
-        tileBackGround = new PIXI.extras.TilingSprite(background,DropSize*mapX,DropSize*mapY);
-        tileBackGround.tileScale.x *= 0.83;
-        tileBackGround.tileScale.y *= 0.83;
-        containAll.addChild(tileBackGround);
-        app.stage.group.enableSort = true;
-        //Drops
-        puzzleDrops_Id = PIXI.loader.resources['src/images/PuzzleDragons.json'].textures;
-        dropFire = puzzleDrops_Id['fire.png'];
-        dropFire.IdGroup = 1;
-        dropEarth = puzzleDrops_Id['earth.png'];
-        dropEarth.IdGroup = 2;
-        dropWater = puzzleDrops_Id['water.png'];
-        dropWater.IdGroup = 3;
-        dropLight = puzzleDrops_Id['light.png'];
-        dropLight.IdGroup = 4;
-        dropDark = puzzleDrops_Id['dark.png'];
-        dropDark.IdGroup = 5;
-        
-        //First Time setting with no matching Page
-        var flg = true;
-        while(flg == true)
-        {
-            //Set DropPage
-            SetDrop();
-            //First Page would been 10combos able page
-            getParentList = Enumerable.from(allDrops).select(xx=> xx.parentGroup).distinct().toArray();
-            for(var i = 0; i < getParentList.length; i++)
-            {
-                getElementList = Enumerable.from(allDrops).where(xx=> xx.parentGroup == getParentList[i]).toArray();
-                if(getElementList.length % 3 != 0)
-                {
-                    containRect.removeChildren();
-                    allDrops = [];
-                    break;
-                }
-            }
-            if(allDrops.length == 0) continue;
-            //Get Remove Able Combo
-            allCombo = comm.GetCombo(allDrops);
-            if(allCombo.length == 0)
-            {
-                //stop infinity Loop
-                flg = false;
-            }
-            else
-            {
-                containRect.removeChildren();
-                allDrops = [];
-            }
-        }
-        containerAll.width = app.view.width;
-        containerAll.height =  app.view.height;
-        gameLoop();
-    }
-        
-    function SetDrop()
+    gameStart();
+    
+    function gameStart()
     {
-        var ret = false;
-        for(var i = 0;i<totalDrops;i++)
-        {
-            //Set Position
-            var position_x = ((i%mapX) * DropSize) + (DropSize/2);
-            var position_y = ((Math.floor(i/mapX)) * DropSize) + (DropSize/2);
-            //get Random element
-            var randomCnt = comm.GetRandomInt(1,dropType);
-            var Drop;
-            
-            // Reset Id if drop exist
-            if(allDrops.length > 0)
-            {
-                if(Enumerable.from(allDrops).count(xx=> xx.x ==position_x && xx.y == position_y ) > 0)
+    	requestAnimationFrame(gameStart);
+    	if(listFlag.StartUpFlag)
+    	{
+    		//SetPuzzleBoard(listFlag.StartUpFlag);
+    		SetPuzzleBoard();
+    	}
+		if(initialData.flgRemoveAble == true)
+		{
+			if(arrayContainer[0].children == 0 || arrayContainer[0].children == undefined)return;
+			var comboList = comm.GetCombo(arrayContainer[0].children,arrayContainer[0].children[0].height);
+			if(comboList.length == 0 ) 
+			{
+				testFlg = false;
+				initialData.flgRemoveAble = false;
+			};
+			for(var i =0; i< comboList.length;i++)
+			{
+				initialData.DropDowning = true;
+				if(i != 0)
+				{
+					if(Enumerable.from(comboList[i - 1]).count(xx=> Number(xx.alpha).toFixed(1) > 0) > 0.0) 
+					{
+						continue; 
+					}
+				}
+				else
+				{
+					if(Enumerable.from(comboList[i]).count(xx=> Number(xx.alpha).toFixed(1) > 0) == 0) 
+					{
+						
+						for(var k = 0; k< comboList[i].length; k++)
+						{
+							arrayContainer[0].removeChild(comboList[i][k])
+						}
+						
+						continue;
+					}
+				}
+				var target = comboList[i]; 
+				for(var j = 0; j< target.length; j++)
+				{
+					if(target[j].alpha == 0) continue;
+					createjs.Tween.get(target[j])
+					//.to({ alpha : 0}, 150,createjs.Ease.backOut)
+					.to({ alpha : 0}, 240,createjs.Ease.linear)
+				}
+			}
+		}
+		else
+		{
+			if(arrayContainer[0].children.length < 1) return ;
+			if(arrayContainer[0].children.length ==initialData.BoardDrops) return;
+			comm.ResetPosition(arrayContainer[0].children);
+			var target01 = Enumerable.from(arrayContainer[0].children).where(xx=>xx.moveTarget != undefined &&  xx.moveTarget > 0).toArray();
+			if(target01.length == 0 ) 
+			{
+				initialData.DropDowning = false;
+				initialData.flgRemoveAble = true;
+			}
+			else
+			{
+                for(var i = 0; i<target01.length;i++)
                 {
-                    var temp = Enumerable.from(allDrops).where(xx=> xx.x ==position_x && xx.y == position_y ).first();
-                    temp.Id = i;
-                    continue;
-                }
-            }
-            // Set parentgroup
-            if(randomCnt == dropFire.IdGroup)
-            {
-                Drop = new PIXI.Sprite(dropFire);
-                Drop.parentGroup = groupFire;
-            }
-            // Set parentgroup
-            else if(randomCnt == dropEarth.IdGroup)
-            {
-                Drop = new PIXI.Sprite(dropEarth);
-                Drop.parentGroup = groupEarth;
-            }
-            // Set parentgroup
-            else if(randomCnt == dropWater.IdGroup)
-            {
-                Drop = new PIXI.Sprite(dropWater);
-                Drop.parentGroup = groupWater;
-            }
-            // Set parentgroup
-            else if(randomCnt == dropLight.IdGroup)
-            {
-                Drop = new PIXI.Sprite(dropLight);
-                Drop.parentGroup = groupLight;
-            }
-            // Set parentgroup
-            else if(randomCnt == dropDark.IdGroup)
-            {
-                Drop = new PIXI.Sprite(dropDark);
-                Drop.parentGroup = groupDark;
-            }
-            // Set parentgroup
-            //Only first time (tranparent)
-            if(flgStartUp == true) Drop.alpha = 0;
-            //Add showable drop on page
-            containRect.addChild(Drop);
-            //Active after keyUp which have matched
-            if(flgMoveUptoDown == true)
-            {
-                //MoveDown from top if drop have removed
-                Drop.startY = position_y
-                Drop.position.set(position_x,(DropSize/2) + position_y -  (mapY * DropSize));
-            }
-            else
-            {
-                //start up Only
-                Drop.position.set(position_x,position_y);
-            }
-            //center point
-            Drop.anchor.set(0.5);
-            Drop.width = DropSize;
-            Drop.height = DropSize;
-            Drop.Id = i;
-            //Set button event to each spirite
-            comm.subscribe(Drop);
-            allDrops.push(Drop);
-            ret = true;
-        }
-        return ret;
-
-    }
-        
-    function gameLoop()
-    {
-        requestAnimationFrame(gameLoop);
-        //Testing
-        if(startTime != undefined)
-        {
-            timeNow = new Date();
-            if(timeNow - startTime >holdingTime - 5000)
-            {
-                var movingDrop = Enumerable.from(allDrops).where(xx=>xx.flgDragging == true).firstOrDefault();
-                if(movingDrop != undefined)
-                {
-                    fingerLife.alpha = 1;
-                    showTouch.alpha = 1;
-                    containTouch.x = movingDrop.x - movingDrop.width/2;
-                    containTouch.y = movingDrop.y - movingDrop.width/2;
-                    fingerLife.width =  (holdingTime- (timeNow - startTime)) / 5000 * (fingerLife.texture.baseTexture.width) ;
-                    if(delay_2 % 6 == 0)
+                    createjs.Tween.get(target01[i])
+                    .to({ y : target01[i].moveTarget }, 150, createjs.Ease.circOut)
+                    
+                    //if(Number(target01[i].y).toFixed(2) == Number(target01[i].moveTarget).toFixed(2))
+                    if(target01[i].y == target01[i].moveTarget)
                     {
-                        if((touch1.alpha == 0 && touch2.alpha == 0 )|| (touch1.alpha == 0 && touch2.alpha == 1 ) )
-                        {
-                            showTouch = touch1;                   
-                            showTouch.alpha = 1;
-                        }
-                        else(touch1.alpha == 1 && touch2.alpha == 0)
-                        {
-                            showTouch = touch2;               
-                            showTouch.alpha = 1;            
-                        }
-                    }
-                    delay_2 ++;
-                }
-            }
-            if(timeNow - startTime >holdingTime )
-            {
-                fingerLife.alpha = 0;
-                showTouch.alpha = 0;
-                touch1.alpha = 0;
-                touch2.alpha = 0;
-                flgMoveTimeOut = true;
-                var movingDrop = Enumerable.from(allDrops).where(xx=>xx.flgDragging == true).firstOrDefault();
-                if(movingDrop != undefined)
-                {
-                    moveCancel(movingDrop);
-                    startTime = undefined;
-                    timeNow = undefined;
-                    var texture = new PIXI.Texture(fingerLife.texture.baseTexture);
-                    fingerLife.width = new PIXI.Sprite(texture);
-                }
-            }
-        }
-        
-        //Only First time
-        if(flgStartUp == true)
-        {
-            //make tranparent drop to normal 
-            if(Enumerable.from(containRect.children).count(xx=> xx.alpha < 1) > 0)
-            {
-                var list_Y = Enumerable.from(containRect.children).select(xx=> xx.y).distinct().orderByDescending().toArray();
-                for(var i =0; i< list_Y.length;i++)
-                {
-                    var lisT = Enumerable.from(containRect.children).where(xx=> xx.y == list_Y[i] ).toArray();
-                    for(var j =0; j< lisT.length;j++)
-                    {
-                        lisT[j].alpha += (i * 0.02) + 0.05;
-                        if(lisT[j].alpha >= 1) lisT[j].alpha = 1;
+                    	target01[i].moveTarget = undefined;
+						resetIDSingle(target01[i]);
                     }
                 }
-            }
-            //reset flg
-            else
-            {
-                flgStartUp = false;
-            }
-        }
-        //Let drop move from up to down
-        if(Enumerable.from(containRect.children).count(xx=> xx.startY > 0) > 0)
-        {
-            var ListY = Enumerable.from(containRect.children).where(xx=> xx.startY > 0).toArray();
-            var Vertical = Enumerable.from(ListY).select(xx=> xx.y).distinct().orderByDescending().toArray();
-            for(var i =0; i< Vertical.length;i++)
-            {
-                var lisT = Enumerable.from(ListY).where(xx=> xx.y == Vertical[i] ).toArray();
-                for(var j =0; j< lisT.length;j++)
-                {
-                    if(lisT[j].y < lisT[j].startY)
-                    {
-                        lisT[j].y  += 25
-                        if(lisT[j].y >= lisT[j].startY) 
-                        {
-                            lisT[j].y = lisT[j].startY;
-                            lisT[j].startY = 0;
-                        }
-                    }
-                }
-            }
-        }
-        else
-        {
-            if(flgDragging == false)
-            {
-                //get maching Drop
-                removeDrop();
-            }
-        }
-        
-        //set TextColor
-        if(containText.children.length > 0)
-        {
-            delay_1 += 1;
-            if(delay_1 % 6 == 0)
-            {
-                for(var  i = 0; i< containText.children.length ;i++)
-                {
-                    if(containText.children[i].style.fill == 'red')
-                    {
-                        containText.children[i].style.fill = 'white';
-                    }
-                    else
-                    {
-                        containText.children[i].style.fill = 'red';
-                    }
-                }
-            }
-        }
-        
-        //Game OverFlg
-        if(teamHp.width <= 0 )
-        {
-           audio.paused = true;
-            if(gameOverFlg == false)handleGameOver();
-            if(containRect.children[0].alpha > 0)
-            {
-                for(var i = 0; i<containRect.children.length; i ++ )
-                {
-                    containRect.children[i].alpha -= 0.03;
-                }
-            }
-            gameOver.parentGroup = groupTop;
-            gameOver.x = 80;
-            gameOver.y = 530;
-            containTop.addChild(gameOver);
-			// Clear all keys
-			storeData(undefined,undefined);
-			gameOverFlg = true;
-        }
-        //if over 9combos 
-        if(countComboForText > maxCombo && containText.children == 0 )
-        {
-            tweenHp(enemyHp);
-            tweenHp(enemyHpCover);
-            containTop.removeChild(enemyHp);
-            let remainHp = Math.floor((enemyHp.width/maxMonsterHp) * 10); 
-            let remainPercentage = Math.floor(remainHp/3);
-            if( remainPercentage != 1)
-            {
-                var tempTexture = new PIXI.Texture(enemyHpTexture.baseTexture,new PIXI.Rectangle(0,0,(enemyHpTexture.baseTexture.width/3)*(remainPercentage-1),enemyHpTexture.height));
-                
-				// Store current user
-                var tTempHp;
-                if(dataSave != undefined &&  dataSave.teamHp != undefined)
-                {
-                    tTempHp = dataSave.teamHp
-                }
-                else
-                {
-                    tTempHp = teamHp.width
-                }
-				storeData((enemyHpTexture.baseTexture.width/3)*(remainPercentage-1),tTempHp);
-                var tempSprite = new PIXI.Sprite(tempTexture);
-                tempSprite.position = enemyHp.position;
-                enemyHp = tempSprite;
-                enemyHp.scale.x /= 1.35;
-                enemyHp.scale.y /= 1.3;
-                enemyHp.parentGroup = groupTop;
-                
-                containTop.addChild(enemyHp);
-            }
-            else
-            {
-                enemyHp.width = 0;
-                gameWinFlg = true;
-            }
-            countComboForText = 0;
-
-        }
-        // if win the game
-        if(gameWinFlg == true)
-        {
-           audio.paused = true;
-            //monster been transparent
-            if(enemy.alpha !=0)
-            {
-                enemy.alpha -= 0.01;
-                enemyHp.alpha -= 0.01;
-                combo9.alpha -= 0.01;
-                if(enemy.alpha < 0.1 )
-                {
-                    enemyHpCover.width = 0;
-                    enemy.alpha = 0;
-                    combo9.alpha = 0;
-                    audio.paused = true;
-                    egg.parentGroup = groupTop;
-                    egg.alpha = 0;
-                    egg.x = 230;
-                    egg.y = 180;
-                    containTop.addChild(egg);
-					// Clear all keys
-            	storeData(undefined,undefined);
-					
-                }
-            }
-            else
-            {
-                if(containRect.children[0].alpha > 0.5)
-                {
-                    for(var i = 0; i<containRect.children.length; i ++ )
-                    {
-                        containRect.children[i].alpha -= 0.5;
-                    }
-                }
-                if(containRect.children[0].alpha <= 0.5)
-                {
-                    //Show egg
-                    egg.alpha += 0.1;
-                    if(egg.alpha >= 1)
-                    {
-                        moveEgg(egg);
-                        handleLoadGameWin();
-                        clearStage.parentGroup = groupTop;
-                        clearStage.scale.x *= 0.8;
-                        clearStage.scale.y *= 0.8;
-                        clearStage.x = 60;
-                        clearStage.y = 50;
-                        containTop.addChild(clearStage);
-                        gameWinFlg = false;
-                        flgBlockMoving = true;
-                    }
-                }
-            }
-        }
-    }
-     
-        
-    // MouseClick
-    function dragDown(event)
-    {
-        if(flgBlockMoving == true) return ;
-        if(this.flgDragging != true && flgStartUp == false)
-        {
-            countComboForText = 0;
-            flgMoveUptoDown = false;
-            flgDragging = true;
-            this.flgDragging = true;
-            this.data = event.data;
-            this.scale.x *= 1.3;
-            this.scale.y *= 1.3;
-            this.org_parentGroup = this.parentGroup;
-            this.parentGroup = groupDrag;
-            this.org_position_x = this.x;
-            this.org_position_y = this.y;
-            this.org_Id = this.Id;
-            var mousePst = this.data.getLocalPosition(this.parent);
-            this.position.set(mousePst.x,mousePst.y);
-        }
-    }
-    //Mouse Unclick
-    function dragUp()
-    {
-        if(this.flgDragging == true)
-        {   
-            moveCancel(this);
-        }
-    }
-    //Mouse Move
-    function dragMove(e)
-    {
-        if(flgMoveTimeOut == true )
-        {
-            e.stopPropagation();
-            moveCancel(this);
-        }
-        if(this.flgDragging == true)
-        {
-//            timeNow = new Date();
-            var mousePst = this.data.getLocalPosition(this.parent);
-            this.position.set(mousePst.x,mousePst.y);
-            var result = comm.hitDrop(this,allDrops,DropSize);
-            if( result != undefined)
-            {
-                if(startTime == undefined)  startTime = new Date();
-                handleMoving();
-                if(audioMoving.playState == 'playFinished')
-                {
-                    handleMoving();
-                }
-                result.org_Id = result.Id;
-                this.org_Id = this.Id;
-                result.Id = this.Id;
-                this.Id = result.org_Id
-                result.org_position_x = result.x ;
-                result.org_position_y = result.y ;
-                result.x = this.org_position_x;
-                result.y = this.org_position_y;
-                this.org_position_x = result.org_position_x;
-                this.org_position_y = result.org_position_y;
-                flgBlockMoving = true;
-            }
-        }
+			}
+			return;
+		}
+		
     }
     
-    //removeDrop   
-    function removeDrop()
+    function SetPuzzleBoard(StartUpFlag = false)
     {
-        loopCount++;
-        allCombo = comm.GetCombo(allDrops);
-        //Move with no combo
-        if(flgBlockMoving == true && allCombo.length == 0 && allDrops.length == (mapX*mapY) && loopCount==1)
-        {
-            handledDamage();
-            tweenHp(teamHpCover);
-            tweenHp(teamHp);
-            teamHp.width = (teamHp.width < (hpBoss/5)) ? 0 :teamHp.width  -= (hpBoss/5);
-            var tEnemyHp;
-            if(dataSave != undefined &&  dataSave.enemyHp != undefined)
-            {
-                tEnemyHp = dataSave.enemyHp
-            }
-            else
-            {
-                tEnemyHp = enemyHp.width * 1.35;
-            }
-            storeData(tEnemyHp,teamHp.width);
-            flgBlockMoving = false;
-            
-            var life = Math.floor(lifePoint * (teamHp.width / hpBoss));
-            viewHp.text = life + '/' + lifePoint;
-            return;
-        }
-        if(allCombo.length == 0 && containText.children.length > 0  && allDrops.length == (mapX*mapY)  )
-        {
-            containText.children = Enumerable.from(containText.children).orderBy(xx=> xx.Id).toArray();
-            containText.children.forEach(textDisappear);
-            var cntElement = Enumerable.from(containText.children).count(xx=> xx.width == 150);
-            if(cntElement == containText.children.length)
-            {            
-                handlePowerUp();
-            	containText.removeChildren();
-            }
-            if(containText.children.length == 0 && countComboForText <= maxCombo)
-            {
-                handledDamage();
-                tweenHp(teamHpCover);
-                tweenHp(teamHp);
-                teamHp.width = (teamHp.width < (hpBoss/5)) ? 0 :teamHp.width  -= (hpBoss/5);
-                var tEnemyHp;
-                if(dataSave != undefined &&  dataSave.enemyHp != undefined)
-                {
-                    tEnemyHp = dataSave.enemyHp
-                }
-                else
-                {
-                    tEnemyHp = enemyHp.width*1.35;
-                }
-                storeData(tEnemyHp,teamHp.width);
-                var life = Math.floor(lifePoint * (teamHp.width / hpBoss));
-                viewHp.text = life + '/' + lifePoint;
-            }
-            flgBlockMoving = false;
-            return;
-        }  
-        if(allCombo.length > 0 && ( Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined) ==  0))
-        {
-            for(var i = 0; i<allCombo.length;i++ )
-            {
-                if(allCombo[i][0].alpha == 1)
-                {
-                   countComboForText += 1;
-                   handleRemove();
-                }
-                for(var j = 0;j <allCombo[i].length;j++)
-                {
-                    allCombo[i][j].alpha -= 0.04; 
-                }
-                if(allCombo[i][0].alpha > 0) return;  
-                for(var j = 0;j <allCombo[i].length;j++)
-                {
-                    containRect.removeChild(allCombo[i][j])
-                    allDrops = Enumerable.from(allDrops).where(xx=> xx !=allCombo[i][j] ).toArray();
-                    allDrops = Enumerable.from(allDrops).distinct().toArray();
-                }
-                var xList = Enumerable.from(allCombo[i]).select(xx=> xx.x).distinct().orderBy().toArray();
-                var yList = Enumerable.from(allCombo[i]).select(xx=> xx.y).distinct().orderBy().toArray();
-                var pointX =  xList[0] + ((xList[xList.length-1] - xList[0]) / 2);
-                var pointY = yList[0] + ((yList[yList.length-1] - yList[0]) / 2);
-                var txt = countComboForText + ' combos';
-                var msg = commPIXI.Setmsg(txt,pointX,pointY,24);
-                msg.parentGroup = groupText;
-                msg.Id = countComboForText;
-                containText.addChild(msg);
-                tweenText(msg);
-            }
-            allCombo = [];            
-        }
-        if(allDrops.length <  (mapX*mapY) )
-        { 
-            if( Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined)== 0)
-            {
-                comm.ResetPosition(allDrops);
-            }
-            if( Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined)> 0)
-            {
-                var move = Enumerable.from(allDrops).where(xx=> xx.moveTarget !=  undefined).toArray();
-                for(var i = 0; i<move.length;i++)
-                {
-                    createjs.Tween.get(move[i])
-                    .to({ y : move[i].moveTarget }, 300, createjs.Ease.circOut)
-                    .call(function(){this.moveTarget = undefined;})
-                    .call(handleComplete);
-                }
-            }
-            else
-            {
-                handleComplete();
-            }
-        }
-        
-    }
-    //cancel move event
-    function moveCancel(sprite)
-    {
-        //if already reset
-        if(sprite.parentGroup != groupDrag)
-        {
-            return;
-        }
-        sprite.scale.x /= 1.3;
-        sprite.scale.y /= 1.3;
-        sprite.parentGroup = sprite.org_parentGroup;
-        sprite.x = sprite.org_position_x;
-        sprite.y = sprite.org_position_y;
-        sprite.flgDragging = false;
-        flgDragging = false  ;
-        flgMoveUptoDown = true;
-        loopCount = 0;
-        startTime = undefined;
-        timeNow = undefined
-        flgMoveTimeOut = false;
-        fingerLife.alpha = 0;
-        showTouch.alpha = 0;
-        touch1.alpha = 0;
-        touch2.alpha = 0;
-    }
-        
-    function handleComplete()
-    {
-        if(Enumerable.from(allDrops).count(xx=> xx.moveTarget !=  undefined)== 0 && allDrops.length <  (mapX*mapY))
-        {
-            var flg = SetDrop();
-            allCombo =comm.GetCombo(allDrops);
-        }
+		try
+		{
+			if( initialData.flgRemoveAble == true) return;
+			if( initialData.DropDowning == true) return;
+			if(arrayDrops != undefined && arrayDrops.length == 0 ) return;
+			if(arrayGroup != undefined && arrayGroup.length == 0 ) return;
+			if((arrayContainer[0].children.length == initialData.BoardDrops) == false )
+			{
+				//if(arrayDrops != undefined && arrayDrops.length > 0 && arrayGroup!= undefined && arrayGroup.length > 0 && arrayContainer[0].children.length != initialData.BoardDrops && initialData.flgRemoveAble == false)
+				//{ 
+				while(true)
+				{
+					for(var i = 0; i< initialData.BoardDrops; i++)
+					{
+						if(arrayContainer[0].children.length > 0)
+						{
+							if(Enumerable.from(arrayContainer[0].children).count(xx=> xx.Id == i) > 0)
+							{
+								continue;
+							}
+						}
+						var x = Math.floor(i%initialData.dropHorizonUnits);
+						var y = Math.floor(i/initialData.dropHorizonUnits);
+						var dropElement = comm.GetRandomInt(0,1);
+						var dropTexture = Enumerable.from(arrayDrops).where(xx=> xx.GroupId == dropElement ).first();
+						var dropSprite = new PIXI.Sprite(dropTexture);
+						dropSprite.anchor.set(0.5);
+						positionX = (x*(dropTexture.width))  + dropTexture.width/2;
+						positionY = (y*(dropTexture.height))  + dropTexture.height/2;
+						dropSprite.Id = i; 
+						dropSprite.x = positionX;
+						dropSprite.y = ((y - initialData.dropVerticalUnits  ) * dropTexture.height);
+						dropSprite.destY = positionY;
+						dropSprite.moveTarget = undefined;
+						var group = Enumerable.from(arrayGroup).where(xx=>xx.Id ==dropElement ).first();
+	            		dropSprite.parentGroup = group;
+						arrayContainer[0].addChild(dropSprite);
+					}
+					if(StartUpFlag == false) break;
+					else
+					{
+						var comboList = comm.GetCombo(arrayContainer[0].children,arrayContainer[0].children[0].height);
+						if(comboList.length > 0)
+						{
+							arrayContainer[0].removeChildren();
+							continue;
+						}
+						else
+						{
+							break;
+						}
+					}
+				}
+			}
+			else
+			//if(arrayContainer[0].children.length == initialData.BoardDrops)
+			{	
+				if(testFlg == true) return;
+				if(Enumerable.from(arrayContainer[0].children).count(xx=> xx.destY > 0 ) > 0)
+				{
+					var moveList = Enumerable.from(arrayContainer[0].children).where(xx=> xx.destY > 0 ).toArray() ;
+				
+					moveList.forEach(function(value){
+					if(value.destY != 0)
+					{
+						createjs.Tween.get(value)
+						.to({ y : value.destY}, 120 ,createjs.Ease.sineInOut)
+					}
+                    if(Number(value.y).toFixed(2) == Number(value.destY).toFixed(2))
+					{
+						value.destY = 0;
+					}
+					if(Enumerable.from(arrayContainer[0].children).count(xx=> xx.destY > 0 ) == 0)
+					{
+						initialData.flgRemoveAble = true;
+					}
+					});
+				}
+			}
+    	}
+		catch(e)
+		{
+			console.log("異常 : " + e);
+		}	
     }
     
-    //textDisappear
-    function textDisappear(element, index, array)
+    function startUpsetup(loader,resources)
     {
-    	sprite = element;
-        createjs.Tween.get(sprite)
-        .to({ width : 150 ,height : 97 }, 60, createjs.Ease.getPowInOut(4))
+    	var dropID = resources.dropJs.textures;
+    	//Get dropSprite
+    	arrayDrops = getDropSprite(dropID);
     }
     
-    //Egg
-    function moveEgg(sprite)
+    function getDropSprite(DropsIdList)
     {
-        
-        let org_rotation = sprite.rotation;
-        createjs.Tween.get(sprite,{ loop: true })
-        .to({ rotation : org_rotation +0.2 }, 300, createjs.Ease.getPowInOut(4))
-        .to({  rotation : org_rotation - 0.2 }, 300, createjs.Ease.getPowInOut(2))
-        .to({  rotation : org_rotation}, 300, createjs.Ease.getPowInOut(2))
-    }
-    //text 
-    function tweenText(spriteText)
-    {
-        let orgWidth = spriteText.width;
-        let orgHeight = spriteText.height;
-        createjs.Tween.get(spriteText)
-        .to({ width : 150 ,height : 97 }, 100, createjs.Ease.getPowInOut(4))
-        .to({ width : orgWidth ,height : orgHeight }, 500, createjs.Ease.getPowInOut(2))
-    }
-    //hp
-    function tweenHp(spriteHp)
-    {
-        let orgX = spriteHp.x;
-        let orgY = spriteHp.y;
-        createjs.Tween.get(spriteHp)
-        .to({ x : orgX + 10 }, 100, createjs.Ease.getPowInOut(2))
-        .to({ x : orgX - 10 }, 100, createjs.Ease.getPowInOut(2))
-        .to({ x : orgX }, 100, createjs.Ease.getPowInOut(2))
-    }
-    //drops
-    function tweenDrops(spriteHp,pointY)
-    {
-        let orgY = spriteHp.y;
-        createjs.Tween.get(spriteHp)
-        .to({ y : pointY }, 100, createjs.Ease.getPowInOut(2))
-    }
-    //BGM
-    function handleLoadComplete(event)
-    {
-       audio = createjs.Sound.play("sound",{loop:-1});
-       audio.volume = 0.7;
-    }
-    //BGM Game Clear
-    function handleLoadGameWin(event)
-    {
-       var gameWin = createjs.Sound.play("gameWin");
-    }
-    //BGM Drop move
-    function handleMoving(event)
-    {
-       audioMoving = createjs.Sound.play("soundMove");
-    }
-    //BGM drop Remove  
-    function handleRemove(event)
-    {
-        // 音源の「Tone.Synth()」を作り、マスター出力に接続
-        let cnt =countComboForText - 1;
-        //Just Testing Look like same however set it
-        var synth = new Tone.Synth({
-                    oscillator:{
-                    // 波形の設定
-                        type:"sine"
-                    },
-                    // エンベロープ(ADSR)の設定
-                        envelope:{
-                        attack:0.005,
-                        decay:0.1,
-                        sustain:0.3,
-                        release:1
-                    }
-                    }).toMaster();
-        // 中央の「ド(C4)」を4分音符で発音する
-        synth.triggerAttackRelease( toneArray[cnt], '8n' );
-    } 
-    //BGM Combo Count 
-    function handlePowerUp(event)
-    {
-       var audioPowerUp = createjs.Sound.play('powerUp');
-    }
-    //BGM Game Over
-    function handleGameOver(event)
-    {
-       var gameOverSound = createjs.Sound.play('gameOverSound');
-    }
-    //BGM Damage
-    function handledDamage(event)
-    {
-       var damage = createjs.Sound.play('damage');
+    	var listDrop = [];
+    	if(DropsIdList == undefined)
+    	{
+    	 	console.log("DropsSprite取得失敗");
+    	}
+    	var nameSprite = ["fire","earth","water","light","dark"];
+    	for(var i =0; i< nameSprite.length; i++ )
+    	{
+    		var nameId = nameSprite[i] + ".png";
+    		var drop  = DropsIdList[nameId];
+    		drop.GroupId = i; 
+    		drop.name = nameSprite[i];
+    		listDrop.push(drop);
+    	}
+    	return listDrop;
     }
     
-    function storeData(enemy,team)
+    function GetGroup()
     {
-		store.set('user', { enemyHp:enemy ,teamHp:team });
+        var arry = [];
+    	for(var i = 0; i< 10; i++)
+    	{
+    		var group = new PIXI.display.Group(i,false);
+    		group.Name = "";
+    		group.TypeName = "Group";
+    		group.Id = i;
+    		arry.push(group);
+    	}
+    	return arry;
     }
-     
+    
+    function setLayer(arryGroup)
+    {
+    	if(arryGroup == undefined || arryGroup.length < 1)
+    	{
+    		console.log("Layer処理異常");
+    	}
+    	arryGroup.forEach(function(value){ app.stage.addChild(new PIXI.display.Layer(value));});
+    }
+    
+    function GetContainer()
+    {
+    	var arryContainer = [];
+    	for(var i = 0; i< 10; i++)
+    	{
+    		var container = new PIXI.Container();
+    		container.ID = i;
+    		container.TypeName = "Container";
+    		container.Name = "";
+    		arryContainer.push(container);
+    	}
+    	arryContainer.forEach(function(value){ app.stage.addChild(value);});
+    	return arryContainer;
+    }
+    
+    function setContainer(arrContainer)
+    {
+    	if(arrContainer == undefined || arrContainer.length < 1 )
+    	{
+    		console.log("Container処理異常");
+    	}
+    	arrContainer.forEach(function(value){ app.stage.addChild(value);});
+    }
+    
+    function getFlag(obj)
+    {
+    	obj = new Object();
+    	obj.StartUpFlag = true;
+    	obj.Dragging = false;
+    	obj.Moving = false;
+    	return obj;
+    }
+    
+    function getInitialData(obj)
+    {
+    	struct = new Object();
+		struct.dropPositionX = 0; 
+		struct.dropPositionY = 200;
+		struct.dropHorizonUnits = 6; 
+		struct.dropVerticalUnits = 5; 
+		struct.BoardDrops = struct.dropHorizonUnits * struct.dropVerticalUnits;
+		struct.flgRemoveAble = false;
+		struct.DropDowning = false;
+		return struct;
+    }
+    
+    function resetID(array)
+    {
+		for(var i = 0; i< initialData.BoardDrops; i++)
+		{
+			var x = Math.floor(i%initialData.dropHorizonUnits);
+			var y = Math.floor(i/initialData.dropHorizonUnits);
+			var dropTexture = Enumerable.from(arrayDrops).first();
+			var dropSprite = new PIXI.Sprite(dropTexture);
+			var positionX = (x*(dropTexture.width))  + dropTexture.width/2;
+			var positionY = (y*(dropTexture.height))  + dropTexture.height/2;
+			if(Enumerable.from(array).count(xx=> xx.x==positionX && xx.y == positionY  ) > 0)
+			{
+				var setId = Enumerable.from(array).where(xx=> xx.x==positionX && xx.y == positionY  ).first();
+				setId = i;
+			}
+		}
+    }
+    
+    
+    function resetIDSingle(singleDrop)
+    {
+		for(var i = 0; i< initialData.BoardDrops; i++)
+		{
+			var x = Math.floor(i%initialData.dropHorizonUnits);
+			var y = Math.floor(i/initialData.dropHorizonUnits);
+			var dropTexture = Enumerable.from(arrayDrops).first();
+			var dropSprite = new PIXI.Sprite(dropTexture);
+			var positionX = (x*(dropTexture.width))  + dropTexture.width/2;
+			var positionY = (y*(dropTexture.height))  + dropTexture.height/2;
+			if(singleDrop.x==positionX && singleDrop.y == positionY )
+			{
+				singleDrop.Id = i;
+			}
+		}
+    }
+    
+    
 	</script>
 </body>
 </html>
